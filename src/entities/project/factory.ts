@@ -18,3 +18,19 @@ export function createEmptyProject(): Project {
     version: 1,
   };
 }
+
+export function normalizeProject(project: Project): Project {
+  return {
+    ...project,
+    ownerId: project.ownerId ?? null,
+    gauge: {
+      ...emptyGauge,
+      ...project.gauge,
+    },
+    measurements: {
+      ...emptyMeasurements,
+      ...project.measurements,
+    },
+    version: project.version || 1,
+  };
+}

@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, Save } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Save } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Gauge, Measurements, Project } from '../../entities/project/types';
 import { calculateBasicSweater } from '../../shared/domain/patternCalculations';
@@ -14,12 +14,35 @@ const measurementLabels: Record<keyof Measurements, string> = {
   easeCm: 'Свобода облегания, см',
   bodyLengthCm: 'Длина изделия, см',
   armholeDepthCm: 'Глубина проймы, см',
-  neckWidthCm: 'Ширина горловины, см',
+  armholeDecreaseStitchesPerSide: 'Убавки проймы с каждой стороны, п.',
+  shoulderWidthCm: 'Ширина плеча, см',
+  neckWidthCm: 'Ширина горловины переда, см',
   frontNeckDepthCm: 'Глубина горловины переда, см',
+  backNeckWidthCm: 'Ширина горловины спинки, см',
+  backNeckDepthCm: 'Глубина горловины спинки, см',
   sleeveLengthCm: 'Длина рукава, см',
   wristCircumferenceCm: 'Обхват запястья, см',
   upperArmCircumferenceCm: 'Обхват рукава сверху, см',
 };
+
+const mainMeasurements: Array<keyof Measurements> = [
+  'bustCm',
+  'easeCm',
+  'bodyLengthCm',
+  'armholeDepthCm',
+  'sleeveLengthCm',
+  'wristCircumferenceCm',
+  'upperArmCircumferenceCm',
+];
+
+const constructionMeasurements: Array<keyof Measurements> = [
+  'armholeDecreaseStitchesPerSide',
+  'shoulderWidthCm',
+  'neckWidthCm',
+  'frontNeckDepthCm',
+  'backNeckWidthCm',
+  'backNeckDepthCm',
+];
 
 const steps = ['Проект', 'Плотность', 'Мерки', 'Расчет'] as const;
 
@@ -35,8 +58,9 @@ export function ProjectEditor({
   onExport: (project: Project) => void;
 }) {
   const [draft, setDraft] = useState(project);
-  const [step, setStep] = useState<(typeof steps)[number]>('Проект');
+  const [stepIndex, setStepIndex] = useState(0);
   const [savedMessage, setSavedMessage] = useState('');
+  const step = steps[stepIndex];
 
   const calculationState = useMemo(() => {
     try {
@@ -62,27 +86,52 @@ export function ProjectEditor({
     setSavedMessage('Сохранено локально.');
   }
 
+  function goNext() {
+    setStepIndex((current) => Math.min(current + 1, steps.length - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function goPrevious() {
+    setStepIndex((current) => Math.max(current - 1, 0));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-5 pb-24">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button type="button" variant="ghost" icon={<ArrowLeft size={18} />} onClick={onBack}>Назад</Button>
+        <Button type="button" variant="ghost" icon={<ArrowLeft size={18} />} onClick={onBack}>
+          Назад
+        </Button>
         <div className="flex gap-2">
-          <Button type="button" variant="secondary" icon={<Download size={18} />} onClick={() => onExport(draft)}>JSON</Button>
-          <Button type="button" icon={<Save size={18} />} onClick={save}>Сохранить</Button>
+          <Button type="button" variant="secondary" icon={<Download size={18} />} onClick={() => onExport(draft)}>
+            JSON
+          </Button>
+          <Button type="button" icon={<Save size={18} />} onClick={save}>
+            Сохранить
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
-        {steps.map((item) => (
-          <button
-            key={item}
-            type="button"
-            className={`min-h-10 rounded-lg border px-2 text-xs font-semibold ${step === item ? 'border-berry bg-berry text-white' : 'border-flax bg-white text-ink'}`}
-            onClick={() => setStep(item)}
-          >
-            {item}
-          </button>
-        ))}
+      <div className="grid gap-2">
+        <div className="flex items-center justify-between text-sm font-semibold text-stone-600">
+          <span>Шаг {stepIndex + 1} из {steps.length}</span>
+          <span>{step}</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-flax">
+          <div className="h-full rounded-full bg-berry transition-all" style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }} />
+        </div>
+        <div className="hidden grid-cols-4 gap-2 sm:grid">
+          {steps.map((item, index) => (
+            <button
+              key={item}
+              type="button"
+              className={`min-h-10 rounded-lg border px-2 text-xs font-semibold ${step === item ? 'border-berry bg-berry text-white' : 'border-flax bg-white text-ink'}`}
+              onClick={() => setStepIndex(index)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
       </div>
 
       {savedMessage ? <p className="text-sm font-semibold text-moss">{savedMessage}</p> : null}
@@ -116,21 +165,10 @@ export function ProjectEditor({
       ) : null}
 
       {step === 'Мерки' ? (
-        <Section title="Мерки">
-          <Card className="grid gap-4">
-            {(Object.keys(measurementLabels) as Array<keyof Measurements>).map((field) => (
-              <Input
-                key={field}
-                label={measurementLabels[field]}
-                type="number"
-                min="0"
-                step="0.1"
-                value={formatNumericInput(draft.measurements[field])}
-                onChange={(event) => updateMeasurement(field, event.target.value)}
-              />
-            ))}
-          </Card>
-        </Section>
+        <div className="grid gap-5">
+          <MeasurementGroup title="Основные мерки" fields={mainMeasurements} draft={draft} onChange={updateMeasurement} />
+          <MeasurementGroup title="Конструкция" fields={constructionMeasurements} draft={draft} onChange={updateMeasurement} />
+        </div>
       ) : null}
 
       {step === 'Расчет' ? (
@@ -140,7 +178,54 @@ export function ProjectEditor({
           <Card className="border-red-200 bg-red-50 text-red-800">{calculationState.error}</Card>
         )
       ) : null}
+
+      <div className="fixed inset-x-0 bottom-0 border-t border-flax bg-white/95 px-4 py-3 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl gap-3">
+          <Button type="button" variant="secondary" className="flex-1" disabled={stepIndex === 0} onClick={goPrevious}>
+            Назад
+          </Button>
+          {stepIndex < steps.length - 1 ? (
+            <Button type="button" className="flex-1" icon={<ArrowRight size={18} />} onClick={goNext}>
+              Далее
+            </Button>
+          ) : (
+            <Button type="button" className="flex-1" icon={<Save size={18} />} onClick={save}>
+              Сохранить
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
+  );
+}
+
+function MeasurementGroup({
+  title,
+  fields,
+  draft,
+  onChange,
+}: {
+  title: string;
+  fields: Array<keyof Measurements>;
+  draft: Project;
+  onChange: (field: keyof Measurements, value: string) => void;
+}) {
+  return (
+    <Section title={title}>
+      <Card className="grid gap-4">
+        {fields.map((field) => (
+          <Input
+            key={field}
+            label={measurementLabels[field]}
+            type="number"
+            min="0"
+            step={field === 'armholeDecreaseStitchesPerSide' ? '1' : '0.1'}
+            value={formatNumericInput(draft.measurements[field])}
+            onChange={(event) => onChange(field, event.target.value)}
+          />
+        ))}
+      </Card>
+    </Section>
   );
 }
 

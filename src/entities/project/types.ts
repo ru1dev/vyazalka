@@ -16,8 +16,12 @@ export type Measurements = {
   easeCm: number;
   bodyLengthCm: number;
   armholeDepthCm: number;
+  armholeDecreaseStitchesPerSide: number;
+  shoulderWidthCm: number;
   neckWidthCm: number;
   frontNeckDepthCm: number;
+  backNeckWidthCm: number;
+  backNeckDepthCm: number;
   sleeveLengthCm: number;
   wristCircumferenceCm: number;
   upperArmCircumferenceCm: number;
@@ -49,6 +53,13 @@ export type CalculationResult = {
     castOnStitches: number;
     rowsToArmhole: number;
     armholeRows: number;
+    shoulderStitches: number;
+    backNeckStitches: number;
+    backNeckDepthRows: number;
+    armholeDecreaseStitchesPerSide: number;
+    armholeShaping: ShapingPlan;
+    rowsAfterArmholeShaping: number;
+    instruction: string[];
   };
   front: {
     widthCm: number;
@@ -57,12 +68,18 @@ export type CalculationResult = {
     armholeRows: number;
     neckStitches: number;
     neckDepthRows: number;
+    neckStartRow: number;
+    neckCenterBindOffStitches: number;
+    neckDecreaseStitchesPerSide: number;
+    neckShaping: ShapingPlan;
+    instruction: string[];
   };
   sleeve: {
     wristStitches: number;
     upperArmStitches: number;
     sleeveRows: number;
     shaping: ShapingPlan;
+    instruction: string[];
   };
   warnings: string[];
 };
@@ -99,8 +116,12 @@ export const emptyMeasurements: Measurements = {
   easeCm: 0,
   bodyLengthCm: 0,
   armholeDepthCm: 0,
+  armholeDecreaseStitchesPerSide: 0,
+  shoulderWidthCm: 0,
   neckWidthCm: 0,
   frontNeckDepthCm: 0,
+  backNeckWidthCm: 0,
+  backNeckDepthCm: 0,
   sleeveLengthCm: 0,
   wristCircumferenceCm: 0,
   upperArmCircumferenceCm: 0,

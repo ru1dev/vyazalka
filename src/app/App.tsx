@@ -1,7 +1,7 @@
 import { Calculator, NotebookTabs } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { AppRoute } from './routes';
-import { createEmptyProject } from '../entities/project/factory';
+import { createEmptyProject, normalizeProject } from '../entities/project/factory';
 import { projectRepository } from '../entities/project/localRepository';
 import type { Project } from '../entities/project/types';
 import { ProjectEditor } from '../features/projectEditor/ProjectEditor';
@@ -18,7 +18,7 @@ export function App() {
   const repository = useMemo(() => projectRepository, []);
 
   async function loadProjects() {
-    setProjects(await repository.list());
+    setProjects((await repository.list()).map(normalizeProject));
   }
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export function App() {
       setMessage('Проект не найден.');
       return;
     }
-    setEditingProject(project);
+    setEditingProject(normalizeProject(project));
     setRoute({ name: 'edit', projectId });
   }
 
@@ -48,13 +48,13 @@ export function App() {
   async function importProject(file: File) {
     const text = await file.text();
     const project = JSON.parse(text) as Project;
-    const imported = {
+    const imported = normalizeProject({
       ...project,
       id: project.id || crypto.randomUUID(),
       ownerId: project.ownerId ?? null,
       updatedAt: new Date().toISOString(),
       version: project.version || 1,
-    };
+    });
     await repository.import(imported);
     await loadProjects();
     setMessage('Проект импортирован.');
