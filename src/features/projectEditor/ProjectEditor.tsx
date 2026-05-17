@@ -64,10 +64,14 @@ export function ProjectEditor({
 
   const calculationState = useMemo(() => {
     try {
-      calculateBasicSweater(draft);
-      return { canCalculate: true, error: '' };
+      const result = calculateBasicSweater(draft);
+      return { canCalculate: true, error: '', fieldWarnings: result.fieldWarnings };
     } catch (error) {
-      return { canCalculate: false, error: error instanceof Error ? error.message : 'Заполните данные для расчета.' };
+      return {
+        canCalculate: false,
+        error: error instanceof Error ? error.message : 'Заполните данные для расчета.',
+        fieldWarnings: {},
+      };
     }
   }, [draft]);
 
@@ -166,8 +170,8 @@ export function ProjectEditor({
 
       {step === 'Мерки' ? (
         <div className="grid gap-5">
-          <MeasurementGroup title="Основные мерки" fields={mainMeasurements} draft={draft} onChange={updateMeasurement} />
-          <MeasurementGroup title="Конструкция" fields={constructionMeasurements} draft={draft} onChange={updateMeasurement} />
+          <MeasurementGroup title="Основные мерки" fields={mainMeasurements} draft={draft} fieldWarnings={calculationState.fieldWarnings} onChange={updateMeasurement} />
+          <MeasurementGroup title="Конструкция" fields={constructionMeasurements} draft={draft} fieldWarnings={calculationState.fieldWarnings} onChange={updateMeasurement} />
         </div>
       ) : null}
 
@@ -203,11 +207,13 @@ function MeasurementGroup({
   title,
   fields,
   draft,
+  fieldWarnings,
   onChange,
 }: {
   title: string;
   fields: Array<keyof Measurements>;
   draft: Project;
+  fieldWarnings: Partial<Record<keyof Measurements, string[]>>;
   onChange: (field: keyof Measurements, value: string) => void;
 }) {
   return (
@@ -221,6 +227,8 @@ function MeasurementGroup({
             min="0"
             step={field === 'armholeDecreaseStitchesPerSide' ? '1' : '0.1'}
             value={formatNumericInput(draft.measurements[field])}
+            hint={fieldWarnings[field]?.join(' ')}
+            className={fieldWarnings[field]?.length ? 'border-amber-400 bg-amber-50' : ''}
             onChange={(event) => onChange(field, event.target.value)}
           />
         ))}

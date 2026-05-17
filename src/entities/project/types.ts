@@ -48,6 +48,7 @@ export type GaugeDerived = {
 export type CalculationResult = {
   gaugeDerived: GaugeDerived;
   formulas: string[];
+  fieldWarnings: Partial<Record<keyof Measurements, string[]>>;
   back: {
     widthCm: number;
     castOnStitches: number;

@@ -70,4 +70,68 @@ describe('calculateBasicSweater', () => {
     expect(result.warnings.some((warning) => warning.includes('Обхват запястья меньше 12 см'))).toBe(true);
     expect(result.warnings.some((warning) => warning.includes('Глубина проймы'))).toBe(true);
   });
+
+  it('warns when shoulders and back neck do not fit after armhole decreases', () => {
+    const result = calculateBasicSweater({
+      ...project,
+      measurements: {
+        ...project.measurements,
+        shoulderWidthCm: 22,
+        backNeckWidthCm: 20,
+      },
+    });
+
+    expect(result.warnings).toContain('Плечи и горловина не помещаются в ширину детали. Уменьшите ширину плеча или горловины.');
+    expect(result.fieldWarnings.shoulderWidthCm?.[0]).toContain('Плечи и горловина не помещаются');
+    expect(result.fieldWarnings.backNeckWidthCm?.[0]).toContain('Плечи и горловина не помещаются');
+  });
+
+  it('warns when front neck starts at or before armhole', () => {
+    const result = calculateBasicSweater({
+      ...project,
+      measurements: {
+        ...project.measurements,
+        frontNeckDepthCm: 24,
+      },
+    });
+
+    expect(result.warnings.some((warning) => warning.includes('Горловина начинается одновременно с проймой'))).toBe(true);
+    expect(result.fieldWarnings.frontNeckDepthCm?.[0]).toContain('Горловина начинается');
+    expect(result.fieldWarnings.armholeDepthCm?.[0]).toContain('Горловина начинается');
+  });
+
+  it('warns when armhole shaping is too small or too large', () => {
+    const small = calculateBasicSweater({
+      ...project,
+      measurements: {
+        ...project.measurements,
+        armholeDecreaseStitchesPerSide: 2,
+      },
+    });
+    const large = calculateBasicSweater({
+      ...project,
+      measurements: {
+        ...project.measurements,
+        armholeDecreaseStitchesPerSide: 16,
+      },
+    });
+
+    expect(small.fieldWarnings.armholeDecreaseStitchesPerSide?.[0]).toContain('очень маленькие');
+    expect(large.fieldWarnings.armholeDecreaseStitchesPerSide?.[0]).toContain('съедают больше четверти');
+  });
+
+  it('warns when sleeve does not expand', () => {
+    const result = calculateBasicSweater({
+      ...project,
+      measurements: {
+        ...project.measurements,
+        wristCircumferenceCm: 30,
+        upperArmCircumferenceCm: 28,
+      },
+    });
+
+    expect(result.sleeve.shaping.rows).toEqual([]);
+    expect(result.warnings.some((warning) => warning.includes('Верх рукава не шире запястья'))).toBe(true);
+    expect(result.fieldWarnings.upperArmCircumferenceCm?.[0]).toContain('Верх рукава не шире запястья');
+  });
 });
