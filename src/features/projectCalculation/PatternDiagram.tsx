@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { DimensionLine, GuideLine, PatternPiece, PieceLabel } from '../patternDiagram/types';
+import type { DecorativeZoneView, DimensionLine, GuideLine, PatternPiece, PieceLabel } from '../patternDiagram/types';
 
 type DiagramMode = 'overview' | string;
 
@@ -88,6 +88,7 @@ function renderPieceSvg(piece: PatternPiece, mode: RenderMode) {
   return (
     <>
       {drawPieceOutline(geometry.path, fillForShape(piece.shape), mode)}
+      {piece.decorativeZones?.map((zone) => drawDecorativeZone(zone, geometry, mode))}
       {guides.map((guide) => drawGuideLine(guide, geometry, mode))}
       {dimensions.map((dimension, index) => drawDimensionLine(dimension, geometry, piece, mode, index))}
       {labels.map((label) => drawPieceLabel(label, geometry, mode))}
@@ -97,6 +98,7 @@ function renderPieceSvg(piece: PatternPiece, mode: RenderMode) {
 
 function createShapeGeometry(piece: PatternPiece, frame: PieceFrame): ShapeGeometry {
   if (piece.shape === 'sleeveTrapezoid') return createSleeveGeometry(piece, frame);
+  if (piece.shape === 'dressBody') return createDressGeometry(piece, frame);
   if (piece.shape === 'customPath' && piece.customPath) return createCustomGeometry(piece.customPath, frame);
   if (piece.shape === 'rectangle') return createRectangleGeometry(frame);
   return createBodyGeometry(piece, frame);
@@ -169,6 +171,69 @@ function createSleeveGeometry(piece: PatternPiece, frame: PieceFrame): ShapeGeom
   });
 }
 
+function createDressGeometry(piece: PatternPiece, frame: PieceFrame): ShapeGeometry {
+  const hipsCm = numberMeasurement(piece, 'hipsWidthCm', numberMeasurement(piece, 'widthCm', 52));
+  const waistCm = numberMeasurement(piece, 'waistWidthCm', hipsCm * 0.78);
+  const bustCm = numberMeasurement(piece, 'bustWidthCm', hipsCm * 0.92);
+  const heightCm = numberMeasurement(piece, 'heightCm', 90);
+  const armholeDepthCm = numberMeasurement(piece, 'armholeDepthCm', 20);
+  const armholeInsetUnits = numberMeasurement(piece, 'armholeInsetUnits', 7);
+  const widthUnits = numberMeasurement(piece, 'hipsWidthUnits', numberMeasurement(piece, 'widthUnits', 110));
+  const neckWidthCm = numberMeasurement(piece, 'neckWidthCm', 16);
+  const neckDepthCm = numberMeasurement(piece, 'neckDepthCm', piece.id === 'front' ? 10 : 3);
+  const waistAt = clamp(numberMeasurement(piece, 'waistAt', 0.42), 0.18, 0.82);
+  const bustAt = clamp(numberMeasurement(piece, 'bustAt', 0.72), waistAt + 0.08, 0.9);
+  const centerX = frame.x + frame.width / 2;
+  const bottomY = frame.y + frame.height;
+  const waistY = bottomY - frame.height * waistAt;
+  const bustY = bottomY - frame.height * bustAt;
+  const armholeY = frame.y + frame.height * (1 - clamp(armholeDepthCm / heightCm, 0.18, 0.38));
+  const hipsWidth = frame.width;
+  const waistWidth = frame.width * clamp(waistCm / Math.max(hipsCm, 1), 0.58, 0.92);
+  const bustWidth = frame.width * clamp(bustCm / Math.max(hipsCm, 1), 0.68, 0.98);
+  const armholeInset = frame.width * clamp(armholeInsetUnits / Math.max(widthUnits / 2, 1), 0.05, 0.14);
+  const topWidth = Math.max(bustWidth - armholeInset * 2, frame.width * 0.46);
+  const neckWidth = frame.width * clamp(neckWidthCm / Math.max(hipsCm, 1), 0.18, 0.38);
+  const neckDepth = frame.height * clamp(neckDepthCm / heightCm, piece.id === 'front' ? 0.09 : 0.035, piece.id === 'front' ? 0.26 : 0.08);
+  const bottomLeft = { x: centerX - hipsWidth / 2, y: bottomY };
+  const bottomRight = { x: centerX + hipsWidth / 2, y: bottomY };
+  const waistLeft = { x: centerX - waistWidth / 2, y: waistY };
+  const waistRight = { x: centerX + waistWidth / 2, y: waistY };
+  const bustLeft = { x: centerX - bustWidth / 2, y: bustY };
+  const bustRight = { x: centerX + bustWidth / 2, y: bustY };
+  const armholeLeft = { x: centerX - bustWidth / 2, y: armholeY };
+  const armholeRight = { x: centerX + bustWidth / 2, y: armholeY };
+  const topLeft = { x: centerX - topWidth / 2, y: frame.y };
+  const topRight = { x: centerX + topWidth / 2, y: frame.y };
+  const neckLeft = { x: centerX - neckWidth / 2, y: frame.y };
+  const neckRight = { x: centerX + neckWidth / 2, y: frame.y };
+  const neckBottom = { x: centerX, y: frame.y + neckDepth };
+  const path = [
+    `M ${bottomLeft.x} ${bottomLeft.y}`,
+    `L ${waistLeft.x} ${waistLeft.y}`,
+    `L ${bustLeft.x} ${bustLeft.y}`,
+    `L ${armholeLeft.x} ${armholeLeft.y}`,
+    `Q ${topLeft.x - 10} ${armholeY - 35} ${topLeft.x} ${topLeft.y}`,
+    `L ${neckLeft.x} ${neckLeft.y}`,
+    `Q ${centerX} ${neckBottom.y} ${neckRight.x} ${neckRight.y}`,
+    `L ${topRight.x} ${topRight.y}`,
+    `Q ${topRight.x + 10} ${armholeY - 35} ${armholeRight.x} ${armholeRight.y}`,
+    `L ${bustRight.x} ${bustRight.y}`,
+    `L ${waistRight.x} ${waistRight.y}`,
+    `L ${bottomRight.x} ${bottomRight.y}`,
+    'Z',
+  ].join(' ');
+
+  return withAnchors(path, frame, {
+    hipsWidth: { start: bottomLeft, end: bottomRight },
+    waistWidth: { start: waistLeft, end: waistRight },
+    bustWidth: { start: bustLeft, end: bustRight },
+    neckWidth: { start: neckLeft, end: neckRight },
+    neckDepth: { start: neckRight, end: neckBottom },
+    armholeDepth: { start: armholeRight, end: topRight },
+  });
+}
+
 function withAnchors(path: string, frame: PieceFrame, customAnchors: Record<string, { start: Point; end: Point }>): ShapeGeometry {
   return {
     path,
@@ -189,7 +254,7 @@ function drawDimensionLine(dimension: DimensionLine, geometry: ShapeGeometry, pi
   const anchor = getDimensionAnchor(dimension, geometry);
   const offset = dimensionOffset(dimension.side, mode, index);
   const label = formatDimensionLabel(dimension, piece);
-  const isHorizontal = dimension.side === 'top' || dimension.side === 'bottom';
+  const isHorizontal = Math.abs(anchor.end.x - anchor.start.x) >= Math.abs(anchor.end.y - anchor.start.y);
   const sx1 = isHorizontal ? anchor.start.x : anchor.start.x + offset;
   const sy1 = isHorizontal ? anchor.start.y + offset : anchor.start.y;
   const sx2 = isHorizontal ? anchor.end.x : anchor.end.x + offset;
@@ -255,6 +320,40 @@ function drawGuideLine(guide: GuideLine, geometry: ShapeGeometry, mode: RenderMo
   );
 }
 
+function drawDecorativeZone(zone: DecorativeZoneView, geometry: ShapeGeometry, mode: RenderMode) {
+  const frame = geometry.frame;
+  const height = frame.height * clamp(zone.heightRatio, 0.03, 0.55);
+  const width = frame.width * clamp(zone.widthRatio, 0.05, 0.82);
+  const centerX = frame.x + frame.width / 2 + frame.width * clamp(zone.offsetRatio ?? 0, -0.4, 0.4);
+  const y = frame.y + frame.height * (1 - clamp(zone.startAt, 0, 0.96)) - height;
+  const top = clamp(y, frame.y + 18, frame.y + frame.height - height - 12);
+  const left = centerX - width / 2;
+  const fill = zone.kind === 'colorBlock' ? '#dfeee9' : '#f5d7df';
+  const stroke = '#8f3551';
+
+  if (zone.kind === 'diamond') {
+    const points = `${centerX},${top} ${left + width},${top + height / 2} ${centerX},${top + height} ${left},${top + height / 2}`;
+    return (
+      <g key={zone.id}>
+        <polygon points={points} fill={fill} stroke={stroke} strokeWidth="1.4" opacity="0.72" vectorEffect="non-scaling-stroke" />
+        {mode === 'detail' && zone.label ? drawText({ x: centerX, y: top + height / 2 + 5, lines: [zone.label], anchor: 'middle', size: 13, weight: 700 }) : null}
+      </g>
+    );
+  }
+
+  return (
+    <g key={zone.id}>
+      <rect x={left} y={top} width={width} height={height} fill={fill} stroke={stroke} strokeWidth="1.4" opacity="0.72" vectorEffect="non-scaling-stroke" />
+      {zone.kind === 'stripe'
+        ? Array.from({ length: Math.max(3, Math.round(width / 22)) }, (_, index) => (
+            <line key={`${zone.id}-stripe-${index}`} x1={left + index * 22} y1={top + height} x2={left + index * 22 + height} y2={top} stroke={stroke} strokeWidth="0.8" opacity="0.45" />
+          ))
+        : null}
+      {mode === 'detail' && zone.label ? drawText({ x: centerX, y: top + height / 2 + 5, lines: [zone.label], anchor: 'middle', size: 13, weight: 700 }) : null}
+    </g>
+  );
+}
+
 function drawPieceLabel(label: PieceLabel, geometry: ShapeGeometry, mode: RenderMode) {
   const at = label.at ?? { x: 0.5, y: 0.5 };
   const x = geometry.frame.x + geometry.frame.width * at.x;
@@ -308,7 +407,7 @@ function getDimensionAnchor(dimension: DimensionLine, geometry: ShapeGeometry) {
 function dimensionOffset(side: DimensionLine['side'], mode: RenderMode, index: number) {
   const base = mode === 'detail' ? 56 : 42;
   const step = mode === 'detail' ? 34 : 26;
-  const value = base + index * 0;
+  const value = base + Math.min(index, 2) * step;
   if (side === 'top' || side === 'left') return -value - (side === 'top' ? Math.min(index, 1) * step : 0);
   return value;
 }
@@ -366,6 +465,7 @@ function splitLabel(label: string): string[] {
 
 function fillForShape(shape: PatternPiece['shape']) {
   if (shape === 'sleeveTrapezoid') return '#f8efd8';
+  if (shape === 'dressBody') return '#fff7ee';
   if (shape === 'frontWithNeck') return '#fffaf2';
   return '#eef6f4';
 }

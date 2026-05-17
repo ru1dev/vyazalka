@@ -207,8 +207,25 @@ export function calculateBasicSweater(project: Project): CalculationResult {
 
 export function validateMeasurements(project: Project): void {
   const gaugeDerived = deriveGauge(project.gauge);
-  const measurements = Object.entries(project.measurements);
-  const invalid = measurements.find(([, value]) => !Number.isFinite(value) || value <= 0);
+  const requiredFields: Array<keyof Measurements> = [
+    'bustCm',
+    'easeCm',
+    'bodyLengthCm',
+    'armholeDepthCm',
+    'armholeDecreaseStitchesPerSide',
+    'shoulderWidthCm',
+    'neckWidthCm',
+    'frontNeckDepthCm',
+    'backNeckWidthCm',
+    'backNeckDepthCm',
+    'sleeveLengthCm',
+    'wristCircumferenceCm',
+    'upperArmCircumferenceCm',
+  ];
+  const invalid = requiredFields.find((field) => {
+    const value = project.measurements[field];
+    return !Number.isFinite(value) || value <= 0;
+  });
 
   if (invalid) {
     throw new Error('Все мерки должны быть положительными числами.');

@@ -1,4 +1,4 @@
-export type GarmentType = 'basic_sweater_bottom_up';
+export type GarmentType = 'basic_sweater_bottom_up' | 'sleeveless_dress';
 
 export type UserDraft = {
   id: string;
@@ -13,15 +13,23 @@ export type Gauge = {
 
 export type Measurements = {
   bustCm: number;
+  waistCm: number;
+  hipsCm: number;
   easeCm: number;
+  easeBustCm: number;
+  easeWaistCm: number;
+  easeHipsCm: number;
   bodyLengthCm: number;
   armholeDepthCm: number;
   armholeDecreaseStitchesPerSide: number;
   shoulderWidthCm: number;
   neckWidthCm: number;
+  frontNeckWidthCm: number;
   frontNeckDepthCm: number;
   backNeckWidthCm: number;
   backNeckDepthCm: number;
+  distanceFromStartToWaistCm: number;
+  distanceFromWaistToHipsCm: number;
   sleeveLengthCm: number;
   wristCircumferenceCm: number;
   upperArmCircumferenceCm: number;
@@ -35,10 +43,22 @@ export type Project = {
   gauge: Gauge;
   measurements: Measurements;
   construction: ConstructionSettings;
+  decorativeZones?: DecorativeZone[];
   notes?: string;
   createdAt: string;
   updatedAt: string;
   version: number;
+};
+
+export type DecorativeZone = {
+  id: string;
+  pieceId: 'front' | 'back';
+  kind: 'diamond' | 'panel' | 'stripe' | 'colorBlock' | 'custom';
+  startRow: number;
+  heightRows: number;
+  widthStitches: number;
+  offsetFromCenterStitches?: number;
+  label?: string;
 };
 
 export type ArmholeMode = 'simple' | 'classic' | 'manual';
@@ -158,15 +178,23 @@ export const emptyGauge: Gauge = {
 
 export const emptyMeasurements: Measurements = {
   bustCm: 0,
+  waistCm: 0,
+  hipsCm: 0,
   easeCm: 0,
+  easeBustCm: 0,
+  easeWaistCm: 0,
+  easeHipsCm: 0,
   bodyLengthCm: 0,
   armholeDepthCm: 0,
   armholeDecreaseStitchesPerSide: 0,
   shoulderWidthCm: 0,
   neckWidthCm: 0,
+  frontNeckWidthCm: 0,
   frontNeckDepthCm: 0,
   backNeckWidthCm: 0,
   backNeckDepthCm: 0,
+  distanceFromStartToWaistCm: 0,
+  distanceFromWaistToHipsCm: 0,
   sleeveLengthCm: 0,
   wristCircumferenceCm: 0,
   upperArmCircumferenceCm: 0,

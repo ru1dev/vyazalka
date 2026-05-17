@@ -3,6 +3,7 @@ export type PatternPieceShape =
   | 'bodyWithArmhole'
   | 'frontWithNeck'
   | 'backWithNeck'
+  | 'dressBody'
   | 'sleeveTrapezoid'
   | 'customPath';
 
@@ -39,6 +40,16 @@ export type PieceMeasurement = {
   unitLabel?: string;
 };
 
+export type DecorativeZoneView = {
+  id: string;
+  kind: 'diamond' | 'panel' | 'stripe' | 'colorBlock' | 'custom';
+  startAt: number;
+  heightRatio: number;
+  widthRatio: number;
+  offsetRatio?: number;
+  label?: string;
+};
+
 export type PatternPiece = {
   id: string;
   title: string;
@@ -49,5 +60,6 @@ export type PatternPiece = {
   labels: PieceLabel[];
   notes?: string[];
   measurementTable?: PieceMeasurement[];
+  decorativeZones?: DecorativeZoneView[];
   customPath?: string;
 };

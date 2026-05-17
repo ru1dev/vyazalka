@@ -5,6 +5,11 @@ import { Button } from '../../shared/ui/Button';
 import { Card } from '../../shared/ui/Card';
 import { Section } from '../../shared/ui/Section';
 
+const garmentTypeLabels: Record<Project['garmentType'], string> = {
+  basic_sweater_bottom_up: 'Базовый свитер / кофта снизу вверх',
+  sleeveless_dress: 'Платье / сарафан без рукавов',
+};
+
 export function ProjectList({
   projects,
   onCreate,
@@ -46,7 +51,7 @@ export function ProjectList({
             <Card key={project.id} className="grid gap-3">
               <button type="button" className="grid gap-1 text-left" onClick={() => onOpen(project.id)}>
                 <span className="text-lg font-bold">{project.title}</span>
-                <span className="text-sm text-stone-600">Базовый свитер / кофта снизу вверх</span>
+                <span className="text-sm text-stone-600">{garmentTypeLabels[project.garmentType]}</span>
                 <span className="text-sm text-stone-600">Изменен: {formatDateTime(project.updatedAt)}</span>
                 <span className="text-sm text-stone-700">
                   {project.gauge.stitchesPer10cm} п. / {project.gauge.rowsPer10cm} р. в 10 см, грудь {project.measurements.bustCm} см

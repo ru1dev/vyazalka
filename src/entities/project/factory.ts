@@ -14,6 +14,7 @@ export function createEmptyProject(): Project {
     gauge: emptyGauge,
     measurements: emptyMeasurements,
     construction: defaultConstructionSettings,
+    decorativeZones: [],
     notes: '',
     createdAt: now,
     updatedAt: now,
@@ -37,6 +38,7 @@ export function normalizeProject(project: Project): Project {
       ...defaultConstructionSettings,
       ...project.construction,
     },
+    decorativeZones: project.decorativeZones ?? [],
     version: project.version || 1,
   };
 }
