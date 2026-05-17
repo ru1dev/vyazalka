@@ -8,6 +8,11 @@ const project: Project = {
   title: 'Repo test',
   garmentType: 'basic_sweater_bottom_up',
   gauge: { stitchesPer10cm: 22, rowsPer10cm: 30 },
+  construction: {
+    autoShoulder: false,
+    armholeMode: 'simple',
+    manualArmholeScheme: '',
+  },
   measurements: {
     bustCm: 96,
     easeCm: 8,

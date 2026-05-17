@@ -1,5 +1,5 @@
 import { Printer } from 'lucide-react';
-import type { Project } from '../../entities/project/types';
+import type { ArmholeSchemeItem, PatternCheck, Project } from '../../entities/project/types';
 import { calculateBasicSweater } from '../../shared/domain/patternCalculations';
 import { Button } from '../../shared/ui/Button';
 import { Card } from '../../shared/ui/Card';
@@ -20,6 +20,60 @@ export function ProjectCalculation({ project }: { project: Project }) {
 
   return (
     <div className="grid gap-6">
+      <Section title="Проверка выкройки">
+        <div className="grid gap-2">
+          {result.checks.map((check) => (
+            <CheckRow key={check.id} check={check} />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Краткий итог">
+        <div className="grid gap-3 md:grid-cols-3">
+          <Card>
+            <h3 className="mb-2 font-bold">Спинка</h3>
+            <p>Набрать {result.back.castOnStitches} п.</p>
+            <p>После проймы: {result.back.castOnStitches - result.back.armholeDecreaseStitchesPerSide * 2} п.</p>
+            <p>Плечи: {result.back.leftShoulderStitches} п. / {result.back.rightShoulderStitches} п.</p>
+            <p>Горловина спинки: {result.back.backNeckStitches} п.</p>
+          </Card>
+          <Card>
+            <h3 className="mb-2 font-bold">Перед</h3>
+            <p>Набрать {result.front.castOnStitches} п.</p>
+            <p>Начало горловины: {result.front.neckStartRow} р.</p>
+            <p>Закрыть средние {result.front.neckCenterBindOffStitches} п.</p>
+            <p>Убавки: {result.front.leftNeckDecreaseStitches} п. / {result.front.rightNeckDecreaseStitches} п.</p>
+          </Card>
+          <Card>
+            <h3 className="mb-2 font-bold">Рукав</h3>
+            <p>Набрать {result.sleeve.wristStitches} п.</p>
+            <p>Вязать {result.sleeve.sleeveRows} р.</p>
+            <p>В конце {result.sleeve.upperArmStitches} п.</p>
+          </Card>
+        </div>
+      </Section>
+
+      <Section title="Расчетный лист">
+        <div className="grid gap-3">
+          {result.calculationSheet.map((section) => (
+            <Card key={section.title}>
+              <h3 className="mb-3 font-bold">{section.title}</h3>
+              <div className="grid gap-2 text-sm">
+                {section.rows.map((row) => (
+                  <div key={`${section.title}-${row.label}`} className="grid gap-1 border-b border-flax/60 pb-2 last:border-0 last:pb-0">
+                    <div className="flex justify-between gap-3">
+                      <span className="text-stone-600">{row.label}</span>
+                      <span className="text-right font-semibold text-ink">{row.value}</span>
+                    </div>
+                    {row.note ? <p className="text-xs text-stone-500">{row.note}</p> : null}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </Section>
+
       <Section title="Пошаговая инструкция">
         <div className="grid gap-3">
           <InstructionCard title="Спинка" steps={result.back.instruction} />
@@ -28,52 +82,15 @@ export function ProjectCalculation({ project }: { project: Project }) {
         </div>
       </Section>
 
-      <Section title="Плотность">
-        <Card className="grid gap-2 text-sm">
-          <p>10 см = {project.gauge.stitchesPer10cm} петель</p>
-          <p>10 см = {project.gauge.rowsPer10cm} рядов</p>
-          <p>1 см = {result.gaugeDerived.stitchesPerCm} петель</p>
-          <p>1 см = {result.gaugeDerived.rowsPerCm} рядов</p>
-        </Card>
-      </Section>
-
       <Section title="Схема">
         <Card>
           <PatternDiagram result={result} measurements={project.measurements} />
         </Card>
       </Section>
 
-      <Section title="Детали">
-        <div className="grid gap-3 md:grid-cols-3">
-          <Card>
-            <h3 className="mb-2 font-bold">Спинка</h3>
-            <p>Набрать {result.back.castOnStitches} п.</p>
-            <p>До проймы: {result.back.rowsToArmhole} р.</p>
-            <p>Пройма: убрать по {result.back.armholeDecreaseStitchesPerSide} п. с каждой стороны.</p>
-            <p>Плечо: {result.back.shoulderStitches} п.</p>
-            <p>Горловина спинки: {result.back.backNeckStitches} п., глубина {result.back.backNeckDepthRows} р.</p>
-          </Card>
-          <Card>
-            <h3 className="mb-2 font-bold">Перед</h3>
-            <p>Набрать {result.front.castOnStitches} п.</p>
-            <p>До проймы: {result.front.rowsToArmhole} р.</p>
-            <p>Начало горловины: {result.front.neckStartRow} р. от начала.</p>
-            <p>Закрыть средние {result.front.neckCenterBindOffStitches} п.</p>
-            <p>Убавки горловины: по {result.front.neckDecreaseStitchesPerSide} п. с каждой стороны.</p>
-          </Card>
-          <Card>
-            <h3 className="mb-2 font-bold">Рукав</h3>
-            <p>Набрать {result.sleeve.wristStitches} п.</p>
-            <p>Вязать {result.sleeve.sleeveRows} р.</p>
-            <p>Прибавить до {result.sleeve.upperArmStitches} п.</p>
-            <p className="mt-2 text-sm text-stone-700">{result.sleeve.shaping.humanReadableInstruction}</p>
-          </Card>
-        </div>
-      </Section>
-
       <Section title="Ряды прибавок и убавок">
         <div className="grid gap-3">
-          <RowsCard title="Пройма" rows={result.back.armholeShaping.rows} />
+          <ArmholeRowsCard scheme={result.back.armholeScheme} />
           <RowsCard title="Горловина переда" rows={result.front.neckShaping.rows} />
           <RowsCard title="Рукав" rows={result.sleeve.shaping.rows} />
         </div>
@@ -101,6 +118,17 @@ export function ProjectCalculation({ project }: { project: Project }) {
   );
 }
 
+function CheckRow({ check }: { check: PatternCheck }) {
+  const className =
+    check.severity === 'critical'
+      ? 'border-red-200 bg-red-50 text-red-800'
+      : check.severity === 'warning'
+        ? 'border-amber-200 bg-amber-50 text-amber-900'
+        : 'border-emerald-200 bg-emerald-50 text-emerald-800';
+
+  return <Card className={`text-sm font-medium ${className}`}>{check.message}</Card>;
+}
+
 function InstructionCard({ title, steps }: { title: string; steps: string[] }) {
   return (
     <Card>
@@ -110,6 +138,21 @@ function InstructionCard({ title, steps }: { title: string; steps: string[] }) {
           <li key={step}>{step}</li>
         ))}
       </ol>
+    </Card>
+  );
+}
+
+function ArmholeRowsCard({ scheme }: { scheme: ArmholeSchemeItem[] }) {
+  return (
+    <Card>
+      <h3 className="mb-3 font-bold">Пройма</h3>
+      <div className="grid gap-2 text-sm">
+        {scheme.map((item) => (
+          <p key={`${item.row}-${item.stitches}`}>
+            {item.row} ряд: {item.action === 'bindOff' ? 'закрыть' : 'убавить'} {item.stitches} п.
+          </p>
+        ))}
+      </div>
     </Card>
   );
 }

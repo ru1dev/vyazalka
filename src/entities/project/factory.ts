@@ -1,5 +1,5 @@
 import type { Project } from './types';
-import { emptyGauge, emptyMeasurements } from './types';
+import { defaultConstructionSettings, emptyGauge, emptyMeasurements } from './types';
 import { nowIso } from '../../shared/utils/date';
 
 export function createEmptyProject(): Project {
@@ -12,6 +12,7 @@ export function createEmptyProject(): Project {
     garmentType: 'basic_sweater_bottom_up',
     gauge: emptyGauge,
     measurements: emptyMeasurements,
+    construction: defaultConstructionSettings,
     notes: '',
     createdAt: now,
     updatedAt: now,
@@ -30,6 +31,10 @@ export function normalizeProject(project: Project): Project {
     measurements: {
       ...emptyMeasurements,
       ...project.measurements,
+    },
+    construction: {
+      ...defaultConstructionSettings,
+      ...project.construction,
     },
     version: project.version || 1,
   };

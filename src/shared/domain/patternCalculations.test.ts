@@ -8,6 +8,11 @@ const project: Project = {
   title: 'Test',
   garmentType: 'basic_sweater_bottom_up',
   gauge: { stitchesPer10cm: 22, rowsPer10cm: 30 },
+  construction: {
+    autoShoulder: false,
+    armholeMode: 'simple',
+    manualArmholeScheme: '',
+  },
   measurements: {
     bustCm: 96,
     easeCm: 8,
@@ -117,7 +122,7 @@ describe('calculateBasicSweater', () => {
     });
 
     expect(small.fieldWarnings.armholeDecreaseStitchesPerSide?.[0]).toContain('очень маленькие');
-    expect(large.fieldWarnings.armholeDecreaseStitchesPerSide?.[0]).toContain('съедают больше четверти');
+    expect(large.fieldWarnings.armholeDecreaseStitchesPerSide?.[0]).toContain('съедают слишком много');
   });
 
   it('warns when sleeve does not expand', () => {
@@ -133,5 +138,35 @@ describe('calculateBasicSweater', () => {
     expect(result.sleeve.shaping.rows).toEqual([]);
     expect(result.warnings.some((warning) => warning.includes('Верх рукава не шире запястья'))).toBe(true);
     expect(result.fieldWarnings.upperArmCircumferenceCm?.[0]).toContain('Верх рукава не шире запястья');
+  });
+
+  it('auto-selects shoulder stitches from available top width', () => {
+    const result = calculateBasicSweater({
+      ...project,
+      construction: {
+        ...project.construction,
+        autoShoulder: true,
+      },
+    });
+
+    expect(result.back.leftShoulderStitches + result.back.rightShoulderStitches + result.back.backNeckStitches).toBe(
+      result.back.castOnStitches - result.back.armholeDecreaseStitchesPerSide * 2,
+    );
+    expect(result.calculationSheet.some((section) => section.title === 'Расчетный лист')).toBe(false);
+  });
+
+  it('uses manual armhole scheme and warns when sum differs', () => {
+    const result = calculateBasicSweater({
+      ...project,
+      construction: {
+        ...project.construction,
+        armholeMode: 'manual',
+        manualArmholeScheme: '3-2-1',
+      },
+    });
+
+    expect(result.back.armholeScheme.map((item) => item.stitches)).toEqual([3, 2, 1]);
+    expect(result.back.armholeSchemeSum).toBe(6);
+    expect(result.constructionWarnings.manualArmholeScheme?.[0]).toContain('Ручная схема проймы дает 6 п.');
   });
 });

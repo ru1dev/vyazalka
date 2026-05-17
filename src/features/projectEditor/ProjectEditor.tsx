@@ -1,6 +1,6 @@
-import { ArrowLeft, ArrowRight, Download, Save } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Save, Wand2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import type { Gauge, Measurements, Project } from '../../entities/project/types';
+import type { ArmholeMode, ConstructionSettings, Gauge, Measurements, Project } from '../../entities/project/types';
 import { calculateBasicSweater } from '../../shared/domain/patternCalculations';
 import { nowIso } from '../../shared/utils/date';
 import { Button } from '../../shared/ui/Button';
@@ -25,26 +25,25 @@ const measurementLabels: Record<keyof Measurements, string> = {
   upperArmCircumferenceCm: 'Обхват рукава сверху, см',
 };
 
+const fieldHints: Partial<Record<keyof Measurements, string>> = {
+  easeCm: 'Обычно 4-12 см для свободного свитера.',
+  armholeDepthCm: 'Обычно 18-25 см для взрослого изделия.',
+  shoulderWidthCm: 'Можно оставить авто: приложение рассчитает плечи из доступной ширины.',
+  armholeDecreaseStitchesPerSide: 'Можно оставить классический режим или задать схему вручную.',
+};
+
 const mainMeasurements: Array<keyof Measurements> = [
   'bustCm',
   'easeCm',
   'bodyLengthCm',
-  'armholeDepthCm',
   'sleeveLengthCm',
   'wristCircumferenceCm',
   'upperArmCircumferenceCm',
 ];
 
-const constructionMeasurements: Array<keyof Measurements> = [
-  'armholeDecreaseStitchesPerSide',
-  'shoulderWidthCm',
-  'neckWidthCm',
-  'frontNeckDepthCm',
-  'backNeckWidthCm',
-  'backNeckDepthCm',
-];
-
-const steps = ['Проект', 'Плотность', 'Мерки', 'Расчет'] as const;
+const constructionFields: Array<keyof Measurements> = ['armholeDepthCm', 'armholeDecreaseStitchesPerSide', 'neckWidthCm', 'frontNeckDepthCm'];
+const advancedFields: Array<keyof Measurements> = ['shoulderWidthCm', 'backNeckWidthCm', 'backNeckDepthCm'];
+const steps = ['Что вяжем', 'Плотность', 'Основные мерки', 'Конструкция', 'Проверка', 'Инструкция'] as const;
 
 export function ProjectEditor({
   project,
@@ -65,12 +64,20 @@ export function ProjectEditor({
   const calculationState = useMemo(() => {
     try {
       const result = calculateBasicSweater(draft);
-      return { canCalculate: true, error: '', fieldWarnings: result.fieldWarnings };
+      return {
+        canCalculate: true,
+        error: '',
+        fieldWarnings: result.fieldWarnings,
+        constructionWarnings: result.constructionWarnings,
+        checks: result.checks,
+      };
     } catch (error) {
       return {
         canCalculate: false,
         error: error instanceof Error ? error.message : 'Заполните данные для расчета.',
         fieldWarnings: {},
+        constructionWarnings: {},
+        checks: [],
       };
     }
   }, [draft]);
@@ -81,6 +88,39 @@ export function ProjectEditor({
 
   function updateMeasurement(field: keyof Measurements, value: string) {
     setDraft((current) => ({ ...current, measurements: { ...current.measurements, [field]: parseNumericInput(value) } }));
+  }
+
+  function updateConstruction(patch: Partial<ConstructionSettings>) {
+    setDraft((current) => ({ ...current, construction: { ...current.construction, ...patch } }));
+  }
+
+  function fillExample() {
+    setDraft((current) => ({
+      ...current,
+      title: 'Пример базового свитера',
+      gauge: { stitchesPer10cm: 22, rowsPer10cm: 30 },
+      measurements: {
+        ...current.measurements,
+        bustCm: 96,
+        easeCm: 8,
+        bodyLengthCm: 60,
+        armholeDepthCm: 20,
+        armholeDecreaseStitchesPerSide: 8,
+        shoulderWidthCm: 12,
+        neckWidthCm: 18,
+        frontNeckDepthCm: 9,
+        backNeckWidthCm: 16,
+        backNeckDepthCm: 3,
+        sleeveLengthCm: 55,
+        wristCircumferenceCm: 18,
+        upperArmCircumferenceCm: 34,
+      },
+      construction: {
+        autoShoulder: true,
+        armholeMode: 'classic',
+        manualArmholeScheme: '3-2-1-1-1',
+      },
+    }));
   }
 
   async function save() {
@@ -124,24 +164,12 @@ export function ProjectEditor({
         <div className="h-2 overflow-hidden rounded-full bg-flax">
           <div className="h-full rounded-full bg-berry transition-all" style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }} />
         </div>
-        <div className="hidden grid-cols-4 gap-2 sm:grid">
-          {steps.map((item, index) => (
-            <button
-              key={item}
-              type="button"
-              className={`min-h-10 rounded-lg border px-2 text-xs font-semibold ${step === item ? 'border-berry bg-berry text-white' : 'border-flax bg-white text-ink'}`}
-              onClick={() => setStepIndex(index)}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
       </div>
 
       {savedMessage ? <p className="text-sm font-semibold text-moss">{savedMessage}</p> : null}
 
-      {step === 'Проект' ? (
-        <Section title="Проект">
+      {step === 'Что вяжем' ? (
+        <Section title="Что вяжем">
           <Card className="grid gap-4">
             <Input label="Название проекта" value={draft.title} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} />
             <Select label="Тип изделия" value={draft.garmentType} onChange={() => undefined}>
@@ -149,6 +177,9 @@ export function ProjectEditor({
             </Select>
             <Input label="Единицы измерения" value="см" disabled />
             <Textarea label="Заметки" value={draft.notes ?? ''} onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))} />
+            <Button type="button" variant="secondary" icon={<Wand2 size={18} />} onClick={fillExample}>
+              Заполнить примером
+            </Button>
           </Card>
         </Section>
       ) : null}
@@ -168,14 +199,58 @@ export function ProjectEditor({
         </Section>
       ) : null}
 
-      {step === 'Мерки' ? (
+      {step === 'Основные мерки' ? (
+        <MeasurementGroup title="Основные мерки" fields={mainMeasurements} draft={draft} fieldWarnings={calculationState.fieldWarnings} onChange={updateMeasurement} />
+      ) : null}
+
+      {step === 'Конструкция' ? (
         <div className="grid gap-5">
-          <MeasurementGroup title="Основные мерки" fields={mainMeasurements} draft={draft} fieldWarnings={calculationState.fieldWarnings} onChange={updateMeasurement} />
-          <MeasurementGroup title="Конструкция" fields={constructionMeasurements} draft={draft} fieldWarnings={calculationState.fieldWarnings} onChange={updateMeasurement} />
+          <Section title="Конструкция">
+            <Card className="grid gap-4">
+              <label className="flex items-center justify-between gap-3 rounded-lg border border-flax bg-white px-3 py-3">
+                <span>
+                  <span className="block text-sm font-semibold">Плечо авто</span>
+                  <span className="block text-xs text-stone-600">Можно оставить авто: приложение рассчитает плечи из доступной ширины.</span>
+                </span>
+                <input type="checkbox" checked={draft.construction.autoShoulder} onChange={(event) => updateConstruction({ autoShoulder: event.target.checked })} />
+              </label>
+              <Select label="Режим проймы" value={draft.construction.armholeMode} onChange={(event) => updateConstruction({ armholeMode: event.target.value as ArmholeMode })}>
+                <option value="classic">Классический 3-2-1...</option>
+                <option value="simple">Простой: по 1 п. равномерно</option>
+                <option value="manual">Ручная схема</option>
+              </Select>
+              {draft.construction.armholeMode === 'manual' ? (
+                <Input
+                  label="Ручная схема убавок"
+                  value={draft.construction.manualArmholeScheme}
+                  hint={calculationState.constructionWarnings.manualArmholeScheme?.join(' ') ?? 'Например: 3-2-1-1-1'}
+                  className={calculationState.constructionWarnings.manualArmholeScheme?.length ? 'border-amber-400 bg-amber-50' : ''}
+                  onChange={(event) => updateConstruction({ manualArmholeScheme: event.target.value })}
+                />
+              ) : null}
+            </Card>
+          </Section>
+          <MeasurementGroup title="Основные параметры конструкции" fields={constructionFields} draft={draft} fieldWarnings={calculationState.fieldWarnings} onChange={updateMeasurement} />
+          <details className="rounded-lg border border-flax bg-white p-4 shadow-soft">
+            <summary className="cursor-pointer font-bold">Расширенные настройки</summary>
+            <div className="mt-4 grid gap-4">
+              {advancedFields.map((field) => (
+                <MeasurementInput key={field} field={field} draft={draft} fieldWarnings={calculationState.fieldWarnings} onChange={updateMeasurement} />
+              ))}
+            </div>
+          </details>
         </div>
       ) : null}
 
-      {step === 'Расчет' ? (
+      {step === 'Проверка' ? (
+        calculationState.canCalculate ? (
+          <ProjectCalculation project={draft} />
+        ) : (
+          <Card className="border-red-200 bg-red-50 text-red-800">{calculationState.error}</Card>
+        )
+      ) : null}
+
+      {step === 'Инструкция' ? (
         calculationState.canCalculate ? (
           <ProjectCalculation project={draft} />
         ) : (
@@ -220,20 +295,38 @@ function MeasurementGroup({
     <Section title={title}>
       <Card className="grid gap-4">
         {fields.map((field) => (
-          <Input
-            key={field}
-            label={measurementLabels[field]}
-            type="number"
-            min="0"
-            step={field === 'armholeDecreaseStitchesPerSide' ? '1' : '0.1'}
-            value={formatNumericInput(draft.measurements[field])}
-            hint={fieldWarnings[field]?.join(' ')}
-            className={fieldWarnings[field]?.length ? 'border-amber-400 bg-amber-50' : ''}
-            onChange={(event) => onChange(field, event.target.value)}
-          />
+          <MeasurementInput key={field} field={field} draft={draft} fieldWarnings={fieldWarnings} onChange={onChange} />
         ))}
       </Card>
     </Section>
+  );
+}
+
+function MeasurementInput({
+  field,
+  draft,
+  fieldWarnings,
+  onChange,
+}: {
+  field: keyof Measurements;
+  draft: Project;
+  fieldWarnings: Partial<Record<keyof Measurements, string[]>>;
+  onChange: (field: keyof Measurements, value: string) => void;
+}) {
+  const warning = fieldWarnings[field]?.join(' ');
+  const hint = [fieldHints[field], warning].filter(Boolean).join(' ');
+
+  return (
+    <Input
+      label={measurementLabels[field]}
+      type="number"
+      min="0"
+      step={field === 'armholeDecreaseStitchesPerSide' ? '1' : '0.1'}
+      value={formatNumericInput(draft.measurements[field])}
+      hint={hint}
+      className={warning ? 'border-amber-400 bg-amber-50' : ''}
+      onChange={(event) => onChange(field, event.target.value)}
+    />
   );
 }
 

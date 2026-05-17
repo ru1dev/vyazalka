@@ -34,10 +34,19 @@ export type Project = {
   garmentType: GarmentType;
   gauge: Gauge;
   measurements: Measurements;
+  construction: ConstructionSettings;
   notes?: string;
   createdAt: string;
   updatedAt: string;
   version: number;
+};
+
+export type ArmholeMode = 'simple' | 'classic' | 'manual';
+
+export type ConstructionSettings = {
+  autoShoulder: boolean;
+  armholeMode: ArmholeMode;
+  manualArmholeScheme: string;
 };
 
 export type GaugeDerived = {
@@ -48,17 +57,27 @@ export type GaugeDerived = {
 export type CalculationResult = {
   gaugeDerived: GaugeDerived;
   formulas: string[];
+  calculationSheet: CalculationSheetSection[];
+  checks: PatternCheck[];
+  hasCriticalIssues: boolean;
   fieldWarnings: Partial<Record<keyof Measurements, string[]>>;
+  constructionWarnings: Partial<Record<keyof ConstructionSettings, string[]>>;
   back: {
     widthCm: number;
     castOnStitches: number;
     rowsToArmhole: number;
     armholeRows: number;
     shoulderStitches: number;
+    leftShoulderStitches: number;
+    rightShoulderStitches: number;
+    leftShoulderCm: number;
+    rightShoulderCm: number;
     backNeckStitches: number;
     backNeckDepthRows: number;
     armholeDecreaseStitchesPerSide: number;
     armholeShaping: ShapingPlan;
+    armholeScheme: ArmholeSchemeItem[];
+    armholeSchemeSum: number;
     rowsAfterArmholeShaping: number;
     instruction: string[];
   };
@@ -71,6 +90,8 @@ export type CalculationResult = {
     neckDepthRows: number;
     neckStartRow: number;
     neckCenterBindOffStitches: number;
+    leftNeckDecreaseStitches: number;
+    rightNeckDecreaseStitches: number;
     neckDecreaseStitchesPerSide: number;
     neckShaping: ShapingPlan;
     instruction: string[];
@@ -83,6 +104,29 @@ export type CalculationResult = {
     instruction: string[];
   };
   warnings: string[];
+};
+
+export type PatternCheckSeverity = 'ok' | 'warning' | 'critical';
+
+export type PatternCheck = {
+  id: string;
+  severity: PatternCheckSeverity;
+  message: string;
+};
+
+export type CalculationSheetSection = {
+  title: string;
+  rows: Array<{
+    label: string;
+    value: string;
+    note?: string;
+  }>;
+};
+
+export type ArmholeSchemeItem = {
+  row: number;
+  stitches: number;
+  action: 'bindOff' | 'decrease';
 };
 
 export type ShapingMode = 'increase' | 'decrease';
@@ -126,4 +170,10 @@ export const emptyMeasurements: Measurements = {
   sleeveLengthCm: 0,
   wristCircumferenceCm: 0,
   upperArmCircumferenceCm: 0,
+};
+
+export const defaultConstructionSettings: ConstructionSettings = {
+  autoShoulder: true,
+  armholeMode: 'classic',
+  manualArmholeScheme: '',
 };
