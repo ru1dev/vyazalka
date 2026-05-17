@@ -1,12 +1,13 @@
 import type { Project } from './types';
 import { defaultConstructionSettings, emptyGauge, emptyMeasurements } from './types';
+import { createId } from '../../shared/utils/createId';
 import { nowIso } from '../../shared/utils/date';
 
 export function createEmptyProject(): Project {
   const now = nowIso();
 
   return {
-    id: crypto.randomUUID(),
+    id: createId(),
     ownerId: null,
     title: 'Новый базовый свитер',
     garmentType: 'basic_sweater_bottom_up',
