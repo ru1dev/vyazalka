@@ -43,15 +43,15 @@ npm run build
 2. Build command: `npm run build`.
 3. Publish directory: `dist`.
 
-### Cloudflare Pages
+### Cloudflare Workers Static Assets
 
-1. Create a Pages project from Git.
+1. Create a Workers application from Git.
 2. Framework preset: `Vite`.
 3. Build command: `npm run build`.
 4. Build output directory: `dist`.
 5. Deploy command: `npm run deploy:cloudflare`.
 
-Do not set `npx wrangler deploy` as the deploy command for this MVP. Use
-`wrangler pages deploy dist --project-name=vyazalka` through the npm script
-above, because this app is a static Pages deployment rather than a Workers
-deployment.
+The project uses Workers Static Assets through `wrangler.jsonc`. Static files
+are uploaded from `dist`, and `not_found_handling` is set to
+`single-page-application` so direct navigation to client routes can fall back to
+`index.html`.
