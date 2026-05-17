@@ -49,8 +49,9 @@ npm run build
 2. Framework preset: `Vite`.
 3. Build command: `npm run build`.
 4. Build output directory: `dist`.
-5. Deploy command: leave empty.
+5. Deploy command: `npm run deploy:cloudflare`.
 
-Do not set `npx wrangler deploy` as the deploy command for this MVP. Cloudflare
-Pages deploys the static `dist` directory after the build command. `wrangler
-deploy` is for Workers-style deployment and may fail on Vite 5 projects.
+Do not set `npx wrangler deploy` as the deploy command for this MVP. Use
+`wrangler pages deploy dist --project-name=vyazalka` through the npm script
+above, because this app is a static Pages deployment rather than a Workers
+deployment.
