@@ -5,6 +5,7 @@ import { Button } from '../../shared/ui/Button';
 import { Card } from '../../shared/ui/Card';
 import { Section } from '../../shared/ui/Section';
 import { PatternDiagram } from './PatternDiagram';
+import { createBasicSweaterPatternPieces } from '../patternDiagram/createBasicSweaterPatternPieces';
 
 export function ProjectCalculation({ project }: { project: Project }) {
   let result;
@@ -84,7 +85,7 @@ export function ProjectCalculation({ project }: { project: Project }) {
 
       <Section title="Схема">
         <Card>
-          <PatternDiagram result={result} measurements={project.measurements} />
+          <PatternDiagram pieces={createBasicSweaterPatternPieces(result, project.measurements)} />
         </Card>
       </Section>
 
