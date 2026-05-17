@@ -48,11 +48,11 @@ export function ProjectEditor({
   }, [draft]);
 
   function updateGauge(field: keyof Gauge, value: string) {
-    setDraft((current) => ({ ...current, gauge: { ...current.gauge, [field]: Number(value) } }));
+    setDraft((current) => ({ ...current, gauge: { ...current.gauge, [field]: parseNumericInput(value) } }));
   }
 
   function updateMeasurement(field: keyof Measurements, value: string) {
-    setDraft((current) => ({ ...current, measurements: { ...current.measurements, [field]: Number(value) } }));
+    setDraft((current) => ({ ...current, measurements: { ...current.measurements, [field]: parseNumericInput(value) } }));
   }
 
   async function save() {
@@ -103,8 +103,8 @@ export function ProjectEditor({
       {step === 'Плотность' ? (
         <Section title="Плотность вязания">
           <Card className="grid gap-4">
-            <Input label="Петель в 10 см" type="number" min="0" step="0.1" value={draft.gauge.stitchesPer10cm} onChange={(event) => updateGauge('stitchesPer10cm', event.target.value)} />
-            <Input label="Рядов в 10 см" type="number" min="0" step="0.1" value={draft.gauge.rowsPer10cm} onChange={(event) => updateGauge('rowsPer10cm', event.target.value)} />
+            <Input label="Петель в 10 см" type="number" min="0" step="0.1" value={formatNumericInput(draft.gauge.stitchesPer10cm)} onChange={(event) => updateGauge('stitchesPer10cm', event.target.value)} />
+            <Input label="Рядов в 10 см" type="number" min="0" step="0.1" value={formatNumericInput(draft.gauge.rowsPer10cm)} onChange={(event) => updateGauge('rowsPer10cm', event.target.value)} />
             <p className="text-sm text-stone-700">
               {draft.gauge.stitchesPer10cm > 0 ? `${draft.gauge.stitchesPer10cm} п. / 10 см = ${draft.gauge.stitchesPer10cm / 10} п./см` : 'Введите плотность по петлям.'}
             </p>
@@ -125,7 +125,7 @@ export function ProjectEditor({
                 type="number"
                 min="0"
                 step="0.1"
-                value={draft.measurements[field]}
+                value={formatNumericInput(draft.measurements[field])}
                 onChange={(event) => updateMeasurement(field, event.target.value)}
               />
             ))}
@@ -142,4 +142,12 @@ export function ProjectEditor({
       ) : null}
     </div>
   );
+}
+
+function parseNumericInput(value: string): number {
+  return value === '' ? 0 : Number(value);
+}
+
+function formatNumericInput(value: number): string {
+  return value === 0 ? '' : String(value);
 }

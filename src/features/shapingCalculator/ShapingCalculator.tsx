@@ -25,7 +25,7 @@ export function ShapingCalculator() {
   }, [input]);
 
   function updateNumber(field: keyof Pick<ShapingInput, 'startStitches' | 'targetStitches' | 'totalRows'>, value: string) {
-    setInput((current) => ({ ...current, [field]: Number(value) }));
+    setInput((current) => ({ ...current, [field]: parseNumericInput(value) }));
   }
 
   return (
@@ -41,9 +41,9 @@ export function ShapingCalculator() {
             <option value="decrease">Убавки</option>
           </Select>
           <div className="grid gap-4 sm:grid-cols-3">
-            <Input label="Начальное количество петель" type="number" min="1" value={input.startStitches} onChange={(event) => updateNumber('startStitches', event.target.value)} />
-            <Input label="Итоговое количество петель" type="number" min="1" value={input.targetStitches} onChange={(event) => updateNumber('targetStitches', event.target.value)} />
-            <Input label="Количество рядов" type="number" min="1" value={input.totalRows} onChange={(event) => updateNumber('totalRows', event.target.value)} />
+            <Input label="Начальное количество петель" type="number" min="1" value={formatNumericInput(input.startStitches)} onChange={(event) => updateNumber('startStitches', event.target.value)} />
+            <Input label="Итоговое количество петель" type="number" min="1" value={formatNumericInput(input.targetStitches)} onChange={(event) => updateNumber('targetStitches', event.target.value)} />
+            <Input label="Количество рядов" type="number" min="1" value={formatNumericInput(input.totalRows)} onChange={(event) => updateNumber('totalRows', event.target.value)} />
           </div>
           <Select
             label="Стороны"
@@ -82,4 +82,12 @@ export function ShapingCalculator() {
       </Section>
     </div>
   );
+}
+
+function parseNumericInput(value: string): number {
+  return value === '' ? 0 : Number(value);
+}
+
+function formatNumericInput(value: number): string {
+  return value === 0 ? '' : String(value);
 }
