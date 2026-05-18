@@ -4,13 +4,72 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Вязалка</title>
+    <script>
+      window.__VYAZALKA_STARTUP_ERRORS__ = [];
+      window.addEventListener('error', function (event) {
+        try {
+          var payload = {
+            type: 'error',
+            message: event.message || '',
+            source: event.filename || '',
+            lineno: event.lineno || 0,
+            colno: event.colno || 0,
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            url: location.href
+          };
+          window.__VYAZALKA_STARTUP_ERRORS__.push(payload);
+          localStorage.setItem('vyazalka:lastStartupError', JSON.stringify(payload));
+        } catch (e) {}
+      });
+      window.addEventListener('unhandledrejection', function (event) {
+        try {
+          var reason = event.reason || {};
+          var payload = {
+            type: 'unhandledrejection',
+            message: reason.message || String(reason),
+            stack: reason.stack || '',
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            url: location.href
+          };
+          window.__VYAZALKA_STARTUP_ERRORS__.push(payload);
+          localStorage.setItem('vyazalka:lastStartupError', JSON.stringify(payload));
+        } catch (e) {}
+      });
+      setTimeout(function () {
+        try {
+          var help = document.getElementById('startup-help');
+          if (help && !window.__VYAZALKA_APP_MOUNTED__) {
+            help.style.display = 'block';
+          }
+        } catch (e) {}
+      }, 6000);
+      setTimeout(function () {
+        try {
+          var failed = document.getElementById('startup-failed');
+          if (failed && !window.__VYAZALKA_APP_MOUNTED__) {
+            failed.style.display = 'block';
+          }
+        } catch (e) {}
+      }, 8000);
+    </script>
   </head>
   <body>
     <noscript>Для работы приложения нужен JavaScript. Включите JavaScript в браузере.</noscript>
     <div id="root">
-      <main style="font-family: system-ui, sans-serif; padding: 24px;">
+      <main style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; max-width: 680px; margin: 0 auto; line-height: 1.5;">
         <h1>Вязалка</h1>
         <p>Загрузка приложения...</p>
+        <div id="startup-help" style="display: none; margin-top: 20px; padding: 14px; border: 1px solid #e6d8bd; border-radius: 10px; background: #fffaf2;">
+          <p style="margin: 0 0 8px;">Если приложение долго не загружается, откройте диагностику.</p>
+          <a href="/debug.html">Открыть диагностику</a>
+        </div>
+        <div id="startup-failed" style="display: none; margin-top: 12px; padding: 14px; border: 1px solid #fecaca; border-radius: 10px; background: #fef2f2; color: #7f1d1d;">
+          <strong>Приложение не смогло запуститься.</strong>
+          <p style="margin: 8px 0;">Попробуйте открыть ссылку в Safari/Chrome, обновить страницу или открыть диагностику.</p>
+          <a href="/debug.html">Открыть диагностику</a>
+        </div>
       </main>
     </div>
     <script type="module" src="/src/main.tsx"></script>

@@ -18,13 +18,14 @@ try {
       </ErrorBoundary>
     </React.StrictMode>,
   );
+  window.__VYAZALKA_APP_MOUNTED__ = true;
 } catch (error) {
   storeLastError(error);
   document.body.innerHTML = `
     <main style="font-family: system-ui, sans-serif; padding: 24px; max-width: 720px; margin: 0 auto;">
       <h1>Что-то пошло не так</h1>
       <p>Приложение не смогло загрузиться. Попробуйте обновить страницу или откройте диагностику.</p>
-      <p><a href="/debug">Открыть диагностику</a></p>
+      <p><a href="/debug.html">Открыть диагностику</a></p>
     </main>
   `;
 }

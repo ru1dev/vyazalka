@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Диагностика Вязалки</title>
+    <style>
+      body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fffaf2; color: #24201d; }
+      main { max-width: 860px; margin: 0 auto; padding: 20px; }
+      h1 { font-size: 26px; margin: 0 0 12px; }
+      .card { background: #fff; border: 1px solid #e6d8bd; border-radius: 10px; padding: 14px; margin: 12px 0; }
+      .row { display: grid; grid-template-columns: minmax(130px, 240px) 1fr; gap: 8px; padding: 7px 0; border-bottom: 1px solid #f0e4cf; }
+      .row:last-child { border-bottom: 0; }
+      .key { color: #635c52; font-weight: 700; }
+      button, a.button { display: inline-block; margin: 6px 6px 6px 0; border: 0; border-radius: 9px; background: #8f3551; color: #fff; padding: 11px 14px; font-weight: 700; text-decoration: none; }
+      button.secondary, a.secondary { background: #f0e4cf; color: #24201d; }
+      textarea { width: 100%; min-height: 220px; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+      .warn { background: #fff7ed; border-color: #fed7aa; color: #7c2d12; }
+      @media (max-width: 560px) { .row { grid-template-columns: 1fr; } main { padding: 14px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Диагностика Вязалки</h1>
+      <p>Эта страница не использует React и основной JS-бандл приложения.</p>
+      <div id="in-app-warning" class="card warn" style="display:none;">
+        Если приложение не работает во встроенном браузере мессенджера, откройте ссылку в Safari или Chrome.
+      </div>
+      <div class="card">
+        <button id="copy">Скопировать диагностику</button>
+        <button id="reset" class="secondary">Очистить данные сайта</button>
+        <a class="button secondary" href="/">Открыть главную</a>
+      </div>
+      <div id="report" class="card"></div>
+      <div id="manual-copy" class="card" style="display:none;">
+        <p>Автокопирование недоступно. Скопируйте текст вручную:</p>
+        <textarea id="report-json" readonly></textarea>
+      </div>
+    </main>
+    <script>
+      (function () {
+        function safe(name, fn) {
+          try { return fn(); } catch (e) { return 'error: ' + (e && e.message ? e.message : String(e)); }
+        }
+        function storageAvailable(name) {
+          return safe(name, function () {
+            var storage = window[name];
+            var key = 'vyazalka:test';
+            storage.setItem(key, '1');
+            storage.removeItem(key);
+            return true;
+          });
+        }
+        function readStorage(key) {
+          return safe(key, function () {
+            return window.localStorage ? window.localStorage.getItem(key) : null;
+          });
+        }
+        function detectInAppBrowser(ua) {
+          return /Telegram|Instagram|FBAN|FBAV|VK|Line|WhatsApp|WebView|wv/i.test(ua || '');
+        }
+        function collect() {
+          var ua = navigator.userAgent || '';
+          return {
+            app: 'vyazalka',
+            url: location.href,
+            userAgent: ua,
+            platform: navigator.platform || '',
+            language: navigator.language || '',
+            screen: { width: screen.width || 0, height: screen.height || 0 },
+            viewport: { width: window.innerWidth || 0, height: window.innerHeight || 0 },
+            online: navigator.onLine,
+            cookiesEnabled: navigator.cookieEnabled,
+            localStorage: storageAvailable('localStorage'),
+            sessionStorage: storageAvailable('sessionStorage'),
+            indexedDB: typeof window.indexedDB !== 'undefined',
+            crypto: typeof window.crypto !== 'undefined',
+            cryptoRandomUUID: !!(window.crypto && window.crypto.randomUUID),
+            cryptoGetRandomValues: !!(window.crypto && window.crypto.getRandomValues),
+            ResizeObserver: typeof window.ResizeObserver !== 'undefined',
+            Promise: typeof window.Promise !== 'undefined',
+            fetch: typeof window.fetch !== 'undefined',
+            URLSearchParams: typeof window.URLSearchParams !== 'undefined',
+            clipboard: !!(navigator.clipboard && navigator.clipboard.writeText),
+            inAppBrowserLikely: detectInAppBrowser(ua),
+            currentTime: new Date().toISOString(),
+            lastStartupError: readStorage('vyazalka:lastStartupError'),
+            lastError: readStorage('vyazalka:lastError'),
+            startupErrorsOnPage: window.__VYAZALKA_STARTUP_ERRORS__ || []
+          };
+        }
+        function render(report) {
+          var container = document.getElementById('report');
+          var html = '';
+          Object.keys(report).forEach(function (key) {
+            var value = report[key];
+            if (typeof value === 'object' && value !== null) value = JSON.stringify(value, null, 2);
+            html += '<div class="row"><div class="key">' + escapeHtml(key) + '</div><div><pre style="white-space:pre-wrap;margin:0;">' + escapeHtml(String(value)) + '</pre></div></div>';
+          });
+          container.innerHTML = html;
+          document.getElementById('report-json').value = JSON.stringify(report, null, 2);
+          if (report.inAppBrowserLikely) document.getElementById('in-app-warning').style.display = 'block';
+        }
+        function escapeHtml(value) {
+          return value.replace(/[&<>"']/g, function (ch) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[ch];
+          });
+        }
+        function resetData() {
+          try {
+            if (window.localStorage) {
+              Object.keys(localStorage).forEach(function (key) {
+                if (key.indexOf('vyazalka') === 0) localStorage.removeItem(key);
+              });
+            }
+          } catch (e) {}
+          try {
+            if (window.sessionStorage) {
+              Object.keys(sessionStorage).forEach(function (key) {
+                if (key.indexOf('vyazalka') === 0) sessionStorage.removeItem(key);
+              });
+            }
+          } catch (e) {}
+          try {
+            if (window.indexedDB) {
+              indexedDB.deleteDatabase('vyazalka');
+              indexedDB.deleteDatabase('vyazalka-projects');
+              indexedDB.deleteDatabase('VyazalkaProjects');
+            }
+          } catch (e) {}
+          location.href = '/';
+        }
+        var report = collect();
+        render(report);
+        document.getElementById('copy').onclick = function () {
+          var text = JSON.stringify(collect(), null, 2);
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).catch(function () {
+              document.getElementById('manual-copy').style.display = 'block';
+            });
+          } else {
+            document.getElementById('manual-copy').style.display = 'block';
+          }
+        };
+        document.getElementById('reset').onclick = resetData;
+      })();
+    </script>
+  </body>
+</html>

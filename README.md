@@ -55,3 +55,25 @@ The project uses Workers Static Assets through `wrangler.jsonc`. Static files
 are uploaded from `dist`, and `not_found_handling` is set to
 `single-page-application` so direct navigation to client routes can fall back to
 `index.html`.
+
+## Диагностика белого экрана
+
+Если на устройстве виден только экран `Вязалка / Загрузка приложения...`, React
+не стартовал или основной JS bundle не загрузился.
+
+1. Откройте `https://<домен>/health.txt`. Должно быть `ok`.
+2. Откройте `https://<домен>/debug.html`. Эта страница статическая и не зависит
+   от React.
+3. Нажмите `Скопировать диагностику` или пришлите скриншот страницы.
+4. Откройте `version.json`, чтобы убедиться, что отдается свежая сборка.
+5. В `index.html` найдите путь к `/assets/*.js` и откройте его напрямую. JS asset
+   должен открываться как JavaScript, а не возвращать HTML.
+6. Проверьте, что `/assets/*.css` отдается как CSS.
+7. На iPhone попробуйте открыть сайт в Safari/Chrome, а не во встроенном
+   браузере Telegram/Instagram/VK.
+8. Уточните версию iOS и Safari/WebView.
+
+Если `/health.txt` не открывается, проблема в домене, Cloudflare routing или
+деплое static assets. Если `health.txt` работает, но `/assets/*.js` возвращает
+`index.html`, проверьте Workers Static Assets и `not_found_handling`: запросы
+`/assets/*` не должны переписываться на SPA fallback.
