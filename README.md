@@ -72,6 +72,7 @@ Pages should serve these URLs directly:
 - `/`
 - `/assets/*.js`
 - `/assets/*.css`
+- `/debug/`
 - `/debug.html`
 - `/health.txt`
 - `/asset-test.js`
@@ -91,7 +92,7 @@ files from `dist` before any SPA fallback.
    от React.
 3. Если `/debug.html` белый, откройте `https://<домен>/plain-debug.html`.
    Это HTML/CSS без JavaScript; если он тоже белый, проблема не в React.
-4. Адрес `/debug` на Cloudflare Pages принудительно отдает `/debug.html`, а не
+4. Откройте `https://<домен>/debug/`. Это отдельная статическая страница, а не
    SPA route.
 5. Нажмите `Скопировать диагностику` или пришлите скриншот страницы.
 6. Проверьте блок `Проверка загрузки assets` на `/debug.html`.
