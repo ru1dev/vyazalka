@@ -89,16 +89,20 @@ files from `dist` before any SPA fallback.
 1. Откройте `https://<домен>/health.txt`. Должно быть `ok`.
 2. Откройте `https://<домен>/debug.html`. Эта страница статическая и не зависит
    от React.
-3. Нажмите `Скопировать диагностику` или пришлите скриншот страницы.
-4. Проверьте блок `Проверка загрузки assets` на `/debug.html`.
-5. Откройте `version.json`, чтобы убедиться, что отдается свежая сборка.
-6. В `index.html` найдите путь к `/assets/*.js` и откройте его напрямую. JS asset
+3. Если `/debug.html` белый, откройте `https://<домен>/plain-debug.html`.
+   Это HTML/CSS без JavaScript; если он тоже белый, проблема не в React.
+4. Адрес `/debug` на Cloudflare Pages принудительно отдает `/debug.html`, а не
+   SPA route.
+5. Нажмите `Скопировать диагностику` или пришлите скриншот страницы.
+6. Проверьте блок `Проверка загрузки assets` на `/debug.html`.
+7. Откройте `version.json`, чтобы убедиться, что отдается свежая сборка.
+8. В `index.html` найдите путь к `/assets/*.js` и откройте его напрямую. JS asset
    должен открываться как JavaScript, а не возвращать HTML.
-7. Проверьте, что `/asset-test.js` отдается как JavaScript, а не как HTML.
-8. Проверьте, что `/assets/*.css` отдается как CSS.
-9. На iPhone попробуйте открыть сайт в Safari/Chrome, а не во встроенном
+9. Проверьте, что `/asset-test.js` отдается как JavaScript, а не как HTML.
+10. Проверьте, что `/assets/*.css` отдается как CSS.
+11. На iPhone попробуйте открыть сайт в Safari/Chrome, а не во встроенном
    браузере Telegram/Instagram/VK.
-10. Уточните версию iOS и Safari/WebView.
+12. Уточните версию iOS и Safari/WebView.
 
 Если `/health.txt` не открывается, проблема в домене, Cloudflare routing или
 деплое static assets. Если `health.txt` работает, но `/assets/*.js` возвращает

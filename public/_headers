@@ -1,0 +1,25 @@
+/debug.html
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache
+
+/plain-debug.html
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache
+
+/debug
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache
+
+/health.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: no-cache
+
+/asset-test.js
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: no-cache
+
+/assets/*.js
+  Content-Type: application/javascript; charset=utf-8
+
+/assets/*.css
+  Content-Type: text/css; charset=utf-8
