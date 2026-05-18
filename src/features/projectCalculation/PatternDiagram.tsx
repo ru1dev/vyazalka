@@ -81,7 +81,11 @@ function PieceCard({ piece, mode }: { piece: PatternPiece; mode: RenderMode }) {
 function renderPieceSvg(piece: PatternPiece, mode: RenderMode) {
   const frame = mode === 'detail' ? DETAIL_FRAME : OVERVIEW_FRAME;
   const geometry = createShapeGeometry(piece, frame);
-  const dimensions = piece.dimensions.filter((dimension) => mode === 'detail' || dimension.priority === 'primary');
+  const dimensions = piece.dimensions.filter((dimension) => {
+    const display = dimension.display ?? 'both';
+    if (display === 'table') return false;
+    return mode === 'detail' || dimension.priority === 'primary';
+  });
   const guides = piece.guides.filter((guide) => mode === 'detail' || guide.priority === 'primary');
   const labels = piece.labels.filter((label) => mode === 'detail' || label.priority === 'primary');
 
@@ -90,7 +94,7 @@ function renderPieceSvg(piece: PatternPiece, mode: RenderMode) {
       {drawPieceOutline(geometry.path, fillForShape(piece.shape), mode)}
       {piece.decorativeZones?.map((zone) => drawDecorativeZone(zone, geometry, mode))}
       {guides.map((guide) => drawGuideLine(guide, geometry, mode))}
-      {dimensions.map((dimension, index) => drawDimensionLine(dimension, geometry, piece, mode, index))}
+      {dimensions.map((dimension, index) => drawDimensionLine(dimension, geometry, piece, mode, placementIndex(dimensions, dimension, index)))}
       {labels.map((label) => drawPieceLabel(label, geometry, mode))}
     </>
   );
@@ -252,13 +256,16 @@ function drawPieceOutline(path: string, fill: string, mode: RenderMode) {
 
 function drawDimensionLine(dimension: DimensionLine, geometry: ShapeGeometry, piece: PatternPiece, mode: RenderMode, index: number) {
   const anchor = getDimensionAnchor(dimension, geometry);
-  const offset = dimensionOffset(dimension.side, mode, index);
+  const placement = dimension.placement ?? dimension.side;
+  const offset = dimensionOffset(placement, mode, index);
   const label = formatDimensionLabel(dimension, piece);
-  const isHorizontal = Math.abs(anchor.end.x - anchor.start.x) >= Math.abs(anchor.end.y - anchor.start.y);
+  const isHorizontal = dimension.orientation
+    ? dimension.orientation === 'horizontal'
+    : Math.abs(anchor.end.x - anchor.start.x) >= Math.abs(anchor.end.y - anchor.start.y);
   const sx1 = isHorizontal ? anchor.start.x : anchor.start.x + offset;
-  const sy1 = isHorizontal ? anchor.start.y + offset : anchor.start.y;
+  const sy1 = isHorizontal ? anchor.start.y + horizontalOffset(placement, offset) : anchor.start.y;
   const sx2 = isHorizontal ? anchor.end.x : anchor.end.x + offset;
-  const sy2 = isHorizontal ? anchor.end.y + offset : anchor.end.y;
+  const sy2 = isHorizontal ? anchor.end.y + horizontalOffset(placement, offset) : anchor.end.y;
   const textOffset = mode === 'detail' ? 24 : 19;
   const labelLines = mode === 'detail' ? splitLabel(label) : [label];
   const labelX = isHorizontal ? (sx1 + sx2) / 2 : sx1 + Math.sign(offset) * textOffset;
@@ -272,8 +279,8 @@ function drawDimensionLine(dimension: DimensionLine, geometry: ShapeGeometry, pi
       {drawArrow({ x: sx1, y: sy1 }, isHorizontal ? 'left' : 'up')}
       {drawArrow({ x: sx2, y: sy2 }, isHorizontal ? 'right' : 'down')}
       {drawText({
-        x: labelX,
-        y: labelY,
+        x: clamp(labelX, 34, 526),
+        y: clamp(labelY, 26, 594),
         lines: labelLines,
         anchor: isHorizontal ? 'middle' : offset > 0 ? 'start' : 'end',
         size: mode === 'detail' ? 16 : 14,
@@ -401,19 +408,31 @@ function PieceNotes({ notes }: { notes: string[] }) {
 }
 
 function getDimensionAnchor(dimension: DimensionLine, geometry: ShapeGeometry) {
-  return geometry.anchors[dimension.measurementKey ?? dimension.kind] ?? geometry.anchors[dimension.kind] ?? geometry.anchors.width;
+  return geometry.anchors[dimension.anchorKey ?? dimension.measurementKey ?? dimension.kind] ?? geometry.anchors[dimension.kind] ?? geometry.anchors.width;
+}
+
+function placementIndex(dimensions: DimensionLine[], dimension: DimensionLine, index: number) {
+  const placement = dimension.placement ?? dimension.side;
+  return dimensions
+    .slice(0, index)
+    .filter((item) => (item.placement ?? item.side) === placement).length;
 }
 
 function dimensionOffset(side: DimensionLine['side'], mode: RenderMode, index: number) {
   const base = mode === 'detail' ? 56 : 42;
   const step = mode === 'detail' ? 34 : 26;
-  const value = base + Math.min(index, 2) * step;
-  if (side === 'top' || side === 'left') return -value - (side === 'top' ? Math.min(index, 1) * step : 0);
+  const value = base + Math.min(index, 1) * step;
+  if (side === 'top' || side === 'left') return -value;
   return value;
 }
 
+function horizontalOffset(placement: DimensionLine['side'], offset: number) {
+  if (placement === 'top' || placement === 'bottom') return offset;
+  return 0;
+}
+
 function formatDimensionLabel(dimension: DimensionLine, piece: PatternPiece) {
-  const key = dimension.measurementKey ?? dimension.kind;
+  const key = dimension.anchorKey ?? dimension.measurementKey ?? dimension.kind;
   const cm = piece.measurements[`${key}Cm`];
   const units = piece.measurements[`${key}Units`];
   if (cm !== undefined && units !== undefined) return `${formatValue(cm)} см / ${units}`;

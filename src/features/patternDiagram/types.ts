@@ -10,6 +10,10 @@ export type PatternPieceShape =
 export type DimensionLine = {
   id: string;
   label: string;
+  orientation?: 'horizontal' | 'vertical';
+  placement?: 'top' | 'right' | 'bottom' | 'left';
+  anchorKey?: string;
+  display?: 'diagram' | 'table' | 'both';
   side: 'top' | 'right' | 'bottom' | 'left';
   kind: 'width' | 'height' | 'custom';
   priority: 'primary' | 'secondary';
