@@ -4,6 +4,7 @@ import legacy from '@vitejs/plugin-legacy';
 import packageJson from './package.json';
 
 export default defineConfig({
+  base: '/',
   plugins: [
     react(),
     legacy({

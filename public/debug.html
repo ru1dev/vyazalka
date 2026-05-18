@@ -6,8 +6,9 @@
     <title>Диагностика Вязалки</title>
     <style>
       body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #fffaf2; color: #24201d; }
-      main { max-width: 860px; margin: 0 auto; padding: 20px; }
+      main { max-width: 980px; margin: 0 auto; padding: 20px; }
       h1 { font-size: 26px; margin: 0 0 12px; }
+      h2 { font-size: 19px; margin: 0 0 10px; }
       .card { background: #fff; border: 1px solid #e6d8bd; border-radius: 10px; padding: 14px; margin: 12px 0; }
       .row { display: grid; grid-template-columns: minmax(130px, 240px) 1fr; gap: 8px; padding: 7px 0; border-bottom: 1px solid #f0e4cf; }
       .row:last-child { border-bottom: 0; }
@@ -15,7 +16,10 @@
       button, a.button { display: inline-block; margin: 6px 6px 6px 0; border: 0; border-radius: 9px; background: #8f3551; color: #fff; padding: 11px 14px; font-weight: 700; text-decoration: none; }
       button.secondary, a.secondary { background: #f0e4cf; color: #24201d; }
       textarea { width: 100%; min-height: 220px; box-sizing: border-box; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
       .warn { background: #fff7ed; border-color: #fed7aa; color: #7c2d12; }
+      .bad { background: #fef2f2; border-color: #fecaca; color: #7f1d1d; }
+      .ok { background: #ecfdf5; border-color: #bbf7d0; color: #14532d; }
       @media (max-width: 560px) { .row { grid-template-columns: 1fr; } main { padding: 14px; } }
     </style>
   </head>
@@ -26,12 +30,22 @@
       <div id="in-app-warning" class="card warn" style="display:none;">
         Если приложение не работает во встроенном браузере мессенджера, откройте ссылку в Safari или Chrome.
       </div>
+      <div id="asset-alert" class="card bad" style="display:none;"></div>
       <div class="card">
         <button id="copy">Скопировать диагностику</button>
         <button id="reset" class="secondary">Очистить данные сайта</button>
         <a class="button secondary" href="/">Открыть главную</a>
+        <a class="button secondary" href="/health.txt">health.txt</a>
+        <a class="button secondary" href="/asset-test.js">asset-test.js</a>
       </div>
-      <div id="report" class="card"></div>
+      <div class="card">
+        <h2>Браузер и сохраненные ошибки</h2>
+        <div id="report"></div>
+      </div>
+      <div class="card">
+        <h2>Проверка загрузки assets</h2>
+        <div id="asset-report">Проверка выполняется...</div>
+      </div>
       <div id="manual-copy" class="card" style="display:none;">
         <p>Автокопирование недоступно. Скопируйте текст вручную:</p>
         <textarea id="report-json" readonly></textarea>
@@ -39,6 +53,8 @@
     </main>
     <script>
       (function () {
+        var currentReport = {};
+
         function safe(name, fn) {
           try { return fn(); } catch (e) { return 'error: ' + (e && e.message ? e.message : String(e)); }
         }
@@ -59,7 +75,12 @@
         function detectInAppBrowser(ua) {
           return /Telegram|Instagram|FBAN|FBAV|VK|Line|WhatsApp|WebView|wv/i.test(ua || '');
         }
-        function collect() {
+        function resolveUrl(value) {
+          var a = document.createElement('a');
+          a.href = value;
+          return a.href;
+        }
+        function collectBrowserReport() {
           var ua = navigator.userAgent || '';
           return {
             app: 'vyazalka',
@@ -89,20 +110,149 @@
             startupErrorsOnPage: window.__VYAZALKA_STARTUP_ERRORS__ || []
           };
         }
-        function render(report) {
-          var container = document.getElementById('report');
+        function extractAssets(html) {
+          var assets = [];
+          var scriptRe = /<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi;
+          var linkRe = /<link\b[^>]*rel=["'][^"']*stylesheet[^"']*["'][^>]*href=["']([^"']+)["'][^>]*>/gi;
+          var linkReReversed = /<link\b[^>]*href=["']([^"']+)["'][^>]*rel=["'][^"']*stylesheet[^"']*["'][^>]*>/gi;
+          var match;
+          while ((match = scriptRe.exec(html))) assets.push({ kind: 'js', url: resolveUrl(match[1]) });
+          while ((match = linkRe.exec(html))) assets.push({ kind: 'css', url: resolveUrl(match[1]) });
+          while ((match = linkReReversed.exec(html))) assets.push({ kind: 'css', url: resolveUrl(match[1]) });
+          return dedupeAssets(assets);
+        }
+        function dedupeAssets(assets) {
+          var seen = {};
+          var result = [];
+          assets.forEach(function (asset) {
+            var key = asset.kind + ':' + asset.url;
+            if (!seen[key]) {
+              seen[key] = true;
+              result.push(asset);
+            }
+          });
+          return result;
+        }
+        function fetchText(url) {
+          return fetch(url, { cache: 'no-store' }).then(function (response) {
+            return response.text().then(function (text) {
+              var headers = {};
+              if (response.headers && response.headers.forEach) {
+                response.headers.forEach(function (value, key) { headers[key] = value; });
+              }
+              return {
+                url: url,
+                status: response.status,
+                ok: response.ok,
+                contentType: response.headers.get('content-type') || '',
+                contentLength: response.headers.get('content-length') || '',
+                first80: text.slice(0, 80),
+                startsWithHtml: /^\s*(<!doctype html|<html)/i.test(text),
+                headers: headers
+              };
+            });
+          });
+        }
+        function checkAsset(asset) {
+          return fetchText(asset.url).then(function (result) {
+            var contentType = String(result.contentType || '').toLowerCase();
+            result.kind = asset.kind;
+            result.isHtmlInsteadOfAsset = result.startsWithHtml || contentType.indexOf('text/html') !== -1;
+            result.expectedTypeOk = asset.kind === 'js'
+              ? /javascript|ecmascript|text\/plain|application\/octet-stream/.test(contentType)
+              : asset.kind === 'css'
+                ? contentType.indexOf('text/css') !== -1
+                : true;
+            result.problem = !result.ok || result.isHtmlInsteadOfAsset || !result.expectedTypeOk;
+            return result;
+          }).catch(function (error) {
+            return {
+              url: asset.url,
+              kind: asset.kind,
+              status: 0,
+              ok: false,
+              contentType: '',
+              contentLength: '',
+              first80: '',
+              startsWithHtml: false,
+              isHtmlInsteadOfAsset: false,
+              expectedTypeOk: false,
+              problem: true,
+              error: error && error.message ? error.message : String(error)
+            };
+          });
+        }
+        function checkAssets() {
+          return fetchText(resolveUrl('/')).then(function (indexResult) {
+            var assets = extractAssets(indexResult.first80 ? '' : '');
+            return fetch(resolveUrl('/'), { cache: 'no-store' }).then(function (response) {
+              return response.text();
+            }).then(function (html) {
+              assets = extractAssets(html);
+              assets.push({ kind: 'txt', url: resolveUrl('/health.txt') });
+              assets.push({ kind: 'js', url: resolveUrl('/asset-test.js') });
+              return Promise.all(assets.map(checkAsset)).then(function (assetResults) {
+                return {
+                  index: indexResult,
+                  discoveredAssets: assets,
+                  assetResults: assetResults,
+                  hasAssetProblems: assetResults.some(function (item) { return item.problem; })
+                };
+              });
+            });
+          }).catch(function (error) {
+            return {
+              error: error && error.message ? error.message : String(error),
+              discoveredAssets: [],
+              assetResults: [],
+              hasAssetProblems: true
+            };
+          });
+        }
+        function renderObject(containerId, report) {
+          var container = document.getElementById(containerId);
           var html = '';
           Object.keys(report).forEach(function (key) {
             var value = report[key];
             if (typeof value === 'object' && value !== null) value = JSON.stringify(value, null, 2);
-            html += '<div class="row"><div class="key">' + escapeHtml(key) + '</div><div><pre style="white-space:pre-wrap;margin:0;">' + escapeHtml(String(value)) + '</pre></div></div>';
+            html += '<div class="row"><div class="key">' + escapeHtml(key) + '</div><div><pre>' + escapeHtml(String(value)) + '</pre></div></div>';
           });
           container.innerHTML = html;
-          document.getElementById('report-json').value = JSON.stringify(report, null, 2);
-          if (report.inAppBrowserLikely) document.getElementById('in-app-warning').style.display = 'block';
+        }
+        function renderAssets(report) {
+          var container = document.getElementById('asset-report');
+          if (report.error) {
+            container.innerHTML = '<div class="card bad"><pre>' + escapeHtml(report.error) + '</pre></div>';
+            return;
+          }
+          var html = '';
+          report.assetResults.forEach(function (item) {
+            var klass = item.problem ? 'card bad' : 'card ok';
+            var message = item.isHtmlInsteadOfAsset && item.kind === 'js'
+              ? 'JS asset возвращает HTML. Worker/роутинг настроен неправильно.'
+              : item.problem
+                ? 'Asset загружается некорректно.'
+                : 'Asset загружается корректно.';
+            html += '<div class="' + klass + '">';
+            html += '<strong>' + escapeHtml(message) + '</strong>';
+            html += '<div class="row"><div class="key">kind</div><div>' + escapeHtml(item.kind) + '</div></div>';
+            html += '<div class="row"><div class="key">url</div><div><pre>' + escapeHtml(item.url) + '</pre></div></div>';
+            html += '<div class="row"><div class="key">status</div><div>' + escapeHtml(String(item.status)) + '</div></div>';
+            html += '<div class="row"><div class="key">ok</div><div>' + escapeHtml(String(item.ok)) + '</div></div>';
+            html += '<div class="row"><div class="key">content-type</div><div>' + escapeHtml(item.contentType || '') + '</div></div>';
+            html += '<div class="row"><div class="key">content-length</div><div>' + escapeHtml(item.contentLength || '') + '</div></div>';
+            html += '<div class="row"><div class="key">first80</div><div><pre>' + escapeHtml(item.first80 || '') + '</pre></div></div>';
+            if (item.error) html += '<div class="row"><div class="key">error</div><div><pre>' + escapeHtml(item.error) + '</pre></div></div>';
+            html += '</div>';
+          });
+          container.innerHTML = html || 'Assets не найдены в index.html.';
+          if (report.hasAssetProblems) {
+            document.getElementById('asset-alert').style.display = 'block';
+            document.getElementById('asset-alert').innerHTML = 'Найдена проблема загрузки assets. Если JS/CSS возвращает HTML, проверьте Cloudflare Worker routing и static assets.';
+          }
         }
         function escapeHtml(value) {
-          return value.replace(/[&<>"']/g, function (ch) {
+          return String(value).replace(/[&<>"']/g, function (ch) {
             return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[ch];
           });
         }
@@ -130,10 +280,29 @@
           } catch (e) {}
           location.href = '/';
         }
-        var report = collect();
-        render(report);
+        function updateTextarea() {
+          document.getElementById('report-json').value = JSON.stringify(currentReport, null, 2);
+        }
+
+        currentReport = collectBrowserReport();
+        renderObject('report', currentReport);
+        updateTextarea();
+        if (currentReport.inAppBrowserLikely) document.getElementById('in-app-warning').style.display = 'block';
+
+        if (window.fetch && window.Promise) {
+          checkAssets().then(function (assetReport) {
+            currentReport.assetDiagnostics = assetReport;
+            renderAssets(assetReport);
+            updateTextarea();
+          });
+        } else {
+          currentReport.assetDiagnostics = { error: 'fetch или Promise недоступны, asset check невозможен.' };
+          renderAssets(currentReport.assetDiagnostics);
+          updateTextarea();
+        }
+
         document.getElementById('copy').onclick = function () {
-          var text = JSON.stringify(collect(), null, 2);
+          var text = JSON.stringify(currentReport, null, 2);
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text).catch(function () {
               document.getElementById('manual-copy').style.display = 'block';
