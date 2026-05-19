@@ -37,6 +37,7 @@
         <a class="button secondary" href="/">Открыть главную</a>
         <a class="button secondary" href="/health.txt">health.txt</a>
         <a class="button secondary" href="/asset-test.js">asset-test.js</a>
+        <a class="button secondary" href="/module-test.js">module-test.js</a>
       </div>
       <div class="card">
         <h2>Браузер и сохраненные ошибки</h2>
@@ -191,6 +192,7 @@
               assets = extractAssets(html);
               assets.push({ kind: 'txt', url: resolveUrl('/health.txt') });
               assets.push({ kind: 'js', url: resolveUrl('/asset-test.js') });
+              assets.push({ kind: 'js', url: resolveUrl('/module-test.js') });
               return Promise.all(assets.map(checkAsset)).then(function (assetResults) {
                 return {
                   index: indexResult,
@@ -207,6 +209,38 @@
               assetResults: [],
               hasAssetProblems: true
             };
+          });
+        }
+        function checkModuleExecution() {
+          return new Promise(function (resolve) {
+            var result = {
+              inlineModuleExecuted: false,
+              externalModuleExecuted: false
+            };
+            try {
+              var inline = document.createElement('script');
+              inline.type = 'module';
+              inline.text = 'window.__VYAZALKA_INLINE_MODULE_TEST__ = true;';
+              document.head.appendChild(inline);
+            } catch (e) {
+              result.inlineModuleError = e && e.message ? e.message : String(e);
+            }
+            try {
+              var external = document.createElement('script');
+              external.type = 'module';
+              external.src = '/module-test.js?ts=' + Date.now();
+              external.onerror = function () {
+                result.externalModuleError = 'external module script failed to load';
+              };
+              document.head.appendChild(external);
+            } catch (e) {
+              result.externalModuleError = e && e.message ? e.message : String(e);
+            }
+            setTimeout(function () {
+              result.inlineModuleExecuted = window.__VYAZALKA_INLINE_MODULE_TEST__ === true;
+              result.externalModuleExecuted = window.__VYAZALKA_EXTERNAL_MODULE_TEST__ === true;
+              resolve(result);
+            }, 1000);
           });
         }
         function renderObject(containerId, report) {
@@ -293,6 +327,11 @@
           checkAssets().then(function (assetReport) {
             currentReport.assetDiagnostics = assetReport;
             renderAssets(assetReport);
+            updateTextarea();
+          });
+          checkModuleExecution().then(function (moduleReport) {
+            currentReport.moduleExecution = moduleReport;
+            renderObject('report', currentReport);
             updateTextarea();
           });
         } else {

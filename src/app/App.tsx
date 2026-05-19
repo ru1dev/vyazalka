@@ -97,7 +97,7 @@ export function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${project.title.replace(/[^\p{L}\p{N}]+/gu, '-').toLowerCase() || 'project'}.json`;
+    link.download = `${sanitizeFileName(project.title) || 'project'}.json`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -154,6 +154,14 @@ export function App() {
       </main>
     </div>
   );
+}
+
+function sanitizeFileName(value: string): string {
+  return value
+    .replace(/[^a-zA-Z0-9а-яА-ЯёЁ_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
 }
 
 function StorageError({ message, onRetry }: { message: string; onRetry: () => void }) {

@@ -76,6 +76,7 @@ Pages should serve these URLs directly:
 - `/debug.html`
 - `/health.txt`
 - `/asset-test.js`
+- `/module-test.js`
 
 SPA fallback may return `index.html` for client routes such as `/debug`, but it
 must not rewrite `/assets/*`, `/debug.html`, `/health.txt`, or `/asset-test.js`.
@@ -99,11 +100,13 @@ files from `dist` before any SPA fallback.
 7. Откройте `version.json`, чтобы убедиться, что отдается свежая сборка.
 8. В `index.html` найдите путь к `/assets/*.js` и откройте его напрямую. JS asset
    должен открываться как JavaScript, а не возвращать HTML.
-9. Проверьте, что `/asset-test.js` отдается как JavaScript, а не как HTML.
-10. Проверьте, что `/assets/*.css` отдается как CSS.
-11. На iPhone попробуйте открыть сайт в Safari/Chrome, а не во встроенном
+9. Проверьте, что `/asset-test.js` и `/module-test.js` отдаются как JavaScript,
+   а не как HTML.
+10. В `/debug.html` проверьте `moduleExecution`: оба значения должны быть `true`.
+11. Проверьте, что `/assets/*.css` отдается как CSS.
+12. На iPhone попробуйте открыть сайт в Safari/Chrome, а не во встроенном
    браузере Telegram/Instagram/VK.
-12. Уточните версию iOS и Safari/WebView.
+13. Уточните версию iOS и Safari/WebView.
 
 Если `/health.txt` не открывается, проблема в домене, Cloudflare routing или
 деплое static assets. Если `health.txt` работает, но `/assets/*.js` возвращает

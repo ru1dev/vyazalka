@@ -1,0 +1,1 @@
+window.__VYAZALKA_EXTERNAL_MODULE_TEST__ = true;
